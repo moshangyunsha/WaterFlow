@@ -17,7 +17,7 @@ export interface IProductItem {
   /**
    * Product image url.
    */
-  image_url: Resource;
+  image_url: ResourceStr;
 
   /**
    * Product name.
@@ -49,7 +49,7 @@ export interface IProductItem {
  * Water flow item.
  */
 export default class ProductItem implements IProductItem {
-  image_url: Resource;
+  image_url: ResourceStr;
   name: string;
   discount: string;
   price: string;

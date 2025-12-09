@@ -1,74 +1,48 @@
-/*
- * Copyright (c) 2023 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import ProductItem from '../viewmodel/ProductItem';
 import { WaterFlowDataSource } from '../viewmodel/WaterFlowDataSource';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
-import { waterFlowData } from '../viewmodel/HomeViewModel';
 import FlowItemComponent from '../view/FlowItemComponent';
-import { router } from '@kit.ArkUI';
+import common from '@ohos.app.ability.common';
+import ProductService from '../service/ProductService';
+import { MOCK_PRODUCTS } from '../viewmodel/MockData';
 
-/**
- * Water flow component.
- *
- * Usage: Directly reference WaterFlowComponent().
- */
 @Component
 export default struct WaterFlowComponent {
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0;
   private datasource: WaterFlowDataSource = new WaterFlowDataSource();
+  @State isDataLoaded: boolean = false;
 
-  aboutToAppear() {
-    this.datasource.setDataArray(waterFlowData);
+  async aboutToAppear() {
+    let context = getContext(this) as common.UIAbilityContext;
+    await ProductService.initDB(context);
+    await ProductService.saveInitialData(MOCK_PRODUCTS);
+    const products = await ProductService.getAllProducts();
+    this.datasource.setDataArray(products);
+    this.isDataLoaded = true;
   }
 
   build() {
-    WaterFlow({ footer: (): void => this.itemFoot() }) {
-      LazyForEach(this.datasource, (item: ProductItem) => {
-        FlowItem() {
-          FlowItemComponent({ item: item })
-
+    Column() {
+      if (!this.isDataLoaded) {
+        Column() { Text("数据加载中...").fontColor(Color.Gray) }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+      } else {
+        WaterFlow({ footer: (): void => this.itemFoot() }) {
+          LazyForEach(this.datasource, (item: ProductItem) => {
+            FlowItem() { FlowItemComponent({ item: item }) }
+          }, (item: ProductItem) => JSON.stringify(item))
         }
-        .onClick(()=>{
-          router.pushUrl({
-            url:'pages/ProductDetailPage',
-            params:item
-          })
-        })
-      }, (item: ProductItem) => JSON.stringify(item))
+        .layoutWeight(Const.WATER_FLOW_LAYOUT_WEIGHT)
+        .columnsTemplate(Const.WATER_FLOW_COLUMNS_TEMPLATE)
+        .columnsGap($r('app.float.water_flow_columns_gap'))
+        .rowsGap($r('app.float.water_flow_row_gap'))
+      }
     }
-    .layoutWeight(Const.WATER_FLOW_LAYOUT_WEIGHT)
-    .layoutDirection(FlexDirection.Column)
-    .columnsTemplate(Const.WATER_FLOW_COLUMNS_TEMPLATE)
-    .columnsGap($r('app.float.water_flow_columns_gap'))
-    .rowsGap($r('app.float.water_flow_row_gap'))
   }
 
-  @Builder
-  itemFoot() {
+  @Builder itemFoot() {
     Column() {
-      Text($r('app.string.footer_text'))
-        .fontColor(Color.Gray)
-        .fontSize($r('app.float.footer_text_size'))
-        .width(Const.FULL_WIDTH)
-        .height($r('app.float.footer_text_height'))
-        .textAlign(TextAlign.Center)
+      Text($r('app.string.footer_text')).fontColor(Color.Gray).fontSize($r('app.float.footer_text_size')).width(Const.FULL_WIDTH).height($r('app.float.footer_text_height')).textAlign(TextAlign.Center)
     }
-    .margin({
-      top: $r('app.float.water_flow_row_gap'),
-      bottom: this.getUIContext().px2vp(this.bottomRectHeight)
-    })
+    .margin({ top: $r('app.float.water_flow_row_gap'), bottom: this.getUIContext().px2vp(this.bottomRectHeight) })
   }
 }

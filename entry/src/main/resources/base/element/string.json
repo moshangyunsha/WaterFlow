@@ -51,6 +51,14 @@
     {
       "name": "footer_text",
       "value": "It's been to the end."
+    },
+    {
+      "name": "collect_text",
+      "value": "收藏"
+    },
+    {
+      "name": "compare_text",
+      "value": "加入对比"
     }
   ]
 }
