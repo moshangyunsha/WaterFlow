@@ -1,50 +1,51 @@
 /**
- * 商品数据模型
- * 对应 MockData 中的数据结构
+ * 统一商品接口定义
  */
-@Observed
-export default class ProductItem {
-  /** 商品列表展示图片 */
+export interface IProductItem {
+  id: number;
+  merchantId: number;
   image_url: ResourceStr;
-
-  /** 商品名称 */
+  width: number;
+  height: number;
   name: string;
+  price: number; // 注意：这里是 number
 
-  /** 折扣信息 (e.g. "限时省200") */
+  discount?: string;
+  promotion?: string;
+  bonus_points?: string;
+  description?: string;
+  detailImages?: ResourceStr[];
+}
+
+@Observed
+export default class ProductItem implements IProductItem {
+  id: number;
+  merchantId: number;
+  image_url: ResourceStr;
+  width: number;
+  height: number;
+  name: string;
+  price: number;
+
   discount: string;
-
-  /** 价格 (e.g. "¥4088") */
-  price: string;
-
-  /** 促销标签 (e.g. "限时") */
   promotion: string;
-
-  /** 积分赠送信息 */
   bonus_points: string;
-
-  /** [新增] 商品详细介绍文案 */
   description: string;
-
-  /** [新增] 详情页轮播图列表 */
   detailImages: ResourceStr[];
 
-  constructor(
-    image_url: ResourceStr,
-    name: string,
-    discount: string,
-    price: string,
-    promotion: string,
-    bonus_points: string,
-    description: string,
-    detailImages: ResourceStr[]
-  ) {
-    this.image_url = image_url;
-    this.name = name;
-    this.discount = discount;
-    this.price = price;
-    this.promotion = promotion;
-    this.bonus_points = bonus_points;
-    this.description = description;
-    this.detailImages = detailImages;
+  constructor(props: IProductItem) {
+    this.id = props.id;
+    this.merchantId = props.merchantId;
+    this.image_url = props.image_url;
+    this.width = props.width;
+    this.height = props.height;
+    this.name = props.name;
+    this.price = props.price;
+
+    this.discount = props.discount || '';
+    this.promotion = props.promotion || '';
+    this.bonus_points = props.bonus_points || '';
+    this.description = props.description || '暂无详细介绍';
+    this.detailImages = props.detailImages || [];
   }
 }

@@ -1,10 +1,10 @@
 {
   "modulePathMap": {
-    "entry": "/Users/zouchaoxu/WaterFlow/entry"
+    "entry": "E:\\download\\WaterFlow\\entry"
   },
   "compileMode": "esmodule",
-  "projectRootPath": "/Users/zouchaoxu/WaterFlow",
-  "nodeModulesPath": "/Users/zouchaoxu/WaterFlow/entry/build/default/intermediates/loader_out/default/node_modules",
+  "projectRootPath": "E:\\download\\WaterFlow",
+  "nodeModulesPath": "E:\\download\\WaterFlow\\entry\\build\\default\\intermediates\\loader_out\\default\\node_modules",
   "byteCodeHarInfo": {},
   "declarationEntry": [],
   "moduleName": "entry",
@@ -17,9 +17,9 @@
   "routerMap": [],
   "hspResourcesMap": {},
   "updateVersionInfo": {},
-  "anBuildOutPut": "/Users/zouchaoxu/WaterFlow/entry/build/default/intermediates/loader_out/default/an/arm64-v8a",
+  "anBuildOutPut": "E:\\download\\WaterFlow\\entry\\build\\default\\intermediates\\loader_out\\default\\an\\arm64-v8a",
   "anBuildMode": "type",
   "patchConfig": {
-    "changedFileList": "/Users/zouchaoxu/WaterFlow/entry/build/default/intermediates/patch/default/changedFileList.json"
+    "changedFileList": "E:\\download\\WaterFlow\\entry\\build\\default\\intermediates\\patch\\default\\changedFileList.json"
   }
 }

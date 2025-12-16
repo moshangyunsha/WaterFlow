@@ -1,511 +1,0 @@
-Ôr@Ÿªassertions¤code´customTransformCache¬dependencies¢id¤meta±moduleSideEffects¬originalCode±originalSourcemap«resolvedIds®sourcemapChainµsyntheticNamedExportsµtransformDependencies®transformFiles¨cacheAstÔrAÚ0½if (!("finalizeConstruction" in ViewPU.prototype)) {
-    Reflect.set(ViewPU.prototype, "finalizeConstruction", () => { });
-}
-import router from '@ohos.router';
-import ProductItem from '../viewmodel/ProductItem';
-class ProductDetail extends ViewPU {
-    constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
-        super(parent, __localStorage, elmtId, extraInfo);
-        if (typeof paramsLambda === "function") {
-            this.paramsGenerator_ = paramsLambda;
-        }
-        this.__product = new ObservedPropertyObjectPU(new ProductItem({ "id": 16777305, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }, '', '', '', '', '', '', []), this, "product");
-        this.setInitiallyProvidedValue(params);
-        this.finalizeConstruction();
-    }
-    setInitiallyProvidedValue(params) {
-        if (params.product !== undefined) {
-            this.product = params.product;
-        }
-    }
-    updateStateVars(params) {
-    }
-    purgeVariableDependenciesOnElmtId(rmElmtId) {
-        this.__product.purgeDependencyOnElmtId(rmElmtId);
-    }
-    aboutToBeDeleted() {
-        this.__product.aboutToBeDeleted();
-        SubscriberManager.Get().delete(this.id__());
-        this.aboutToBeDeletedInternal();
-    }
-    get product() {
-        return this.__product.get();
-    }
-    set product(newValue) {
-        this.__product.set(newValue);
-    }
-    aboutToAppear() {
-        const params = router.getParams();
-        if (params) {
-            this.product = params;
-        }
-    }
-    initialRender() {
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Stack.create({ alignContent: Alignment.BottomEnd });
-        }, Stack);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Scroll.create();
-            Scroll.width('100%');
-            Scroll.height('100%');
-            Scroll.scrollBar(BarState.Off);
-        }, Scroll);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Column.create();
-            Column.width('100%');
-            Column.backgroundColor('#F5F5F5');
-        }, Column);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // 1. é¡¶éƒ¨å¤§å›¾
-            Stack.create({ alignContent: Alignment.BottomEnd });
-        }, Stack);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Image.create(this.product.image_url);
-            Image.width('100%');
-            Image.height(350);
-            Image.objectFit(ImageFit.Cover);
-        }, Image);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('1/5');
-            Text.fontSize(12);
-            Text.fontColor(Color.White);
-            Text.backgroundColor('#80000000');
-            Text.padding({ left: 10, right: 10, top: 4, bottom: 4 });
-            Text.borderRadius(12);
-            Text.margin({ right: 16, bottom: 16 });
-        }, Text);
-        Text.pop();
-        // 1. é¡¶éƒ¨å¤§å›¾
-        Stack.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // 2. ä»·æ ¼ä¸Žé”€é‡
-            Column.create();
-            // 2. ä»·æ ¼ä¸Žé”€é‡
-            Column.padding(16);
-            // 2. ä»·æ ¼ä¸Žé”€é‡
-            Column.backgroundColor(Color.White);
-        }, Column);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Row.create();
-            Row.width('100%');
-            Row.alignItems(VerticalAlign.Bottom);
-            Row.margin({ bottom: 8 });
-        }, Row);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('Â¥');
-            Text.fontSize(16);
-            Text.fontColor('#FF5000');
-            Text.baselineOffset(-4);
-            Text.fontWeight(FontWeight.Bold);
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(this.product.price.replace(/[^\d.]/g, ''));
-            Text.fontSize(28);
-            Text.fontColor('#FF5000');
-            Text.fontWeight(FontWeight.Bold);
-            Text.margin({ right: 8 });
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('åˆ¸åŽ');
-            Text.fontSize(12);
-            Text.fontColor('#FF5000');
-            Text.backgroundColor('#FFE4D0');
-            Text.padding({ left: 4, right: 4, top: 1, bottom: 1 });
-            Text.borderRadius(2);
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Blank.create();
-        }, Blank);
-        Blank.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('å·²å”® 98+');
-            Text.fontSize(12);
-            Text.fontColor('#999');
-        }, Text);
-        Text.pop();
-        Row.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Row.create();
-            Row.width('100%');
-        }, Row);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('ä¼˜æƒ å‰ Â¥' + (parseFloat(this.product.price.replace(/[^\d.]/g, '') || '0') * 1.2).toFixed(0));
-            Text.fontSize(12);
-            Text.fontColor('#999');
-            Text.decoration({ type: TextDecorationType.LineThrough });
-        }, Text);
-        Text.pop();
-        Row.pop();
-        // 2. ä»·æ ¼ä¸Žé”€é‡
-        Column.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // 3. æ ‡é¢˜
-            Column.create();
-            // 3. æ ‡é¢˜
-            Column.padding({ left: 16, right: 16, bottom: 16 });
-            // 3. æ ‡é¢˜
-            Column.backgroundColor(Color.White);
-        }, Column);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(this.product.name);
-            Text.fontSize(18);
-            Text.fontWeight(FontWeight.Bold);
-            Text.maxLines(2);
-            Text.textOverflow({ overflow: TextOverflow.Ellipsis });
-            Text.lineHeight(24);
-            Text.margin({ bottom: 8 });
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Row.create({ space: 8 });
-            Row.width('100%');
-        }, Row);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('æžé€Ÿé€€æ¬¾');
-            Text.fontSize(10);
-            Text.fontColor('#FF0036');
-            Text.border({ width: 1, color: '#FF0036' });
-            Text.padding(2);
-            Text.borderRadius(2);
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('åŒ…é‚®');
-            Text.fontSize(10);
-            Text.fontColor('#FF0036');
-            Text.border({ width: 1, color: '#FF0036' });
-            Text.padding(2);
-            Text.borderRadius(2);
-        }, Text);
-        Text.pop();
-        Row.pop();
-        // 3. æ ‡é¢˜
-        Column.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Divider.create();
-            Divider.strokeWidth(8);
-            Divider.color('#F5F5F5');
-        }, Divider);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // 4. è¯¦æƒ…ä»‹ç» (è¯»å–æ–°å­—æ®µ description)
-            Column.create();
-            // 4. è¯¦æƒ…ä»‹ç» (è¯»å–æ–°å­—æ®µ description)
-            Column.backgroundColor(Color.White);
-            // 4. è¯¦æƒ…ä»‹ç» (è¯»å–æ–°å­—æ®µ description)
-            Column.width('100%');
-            // 4. è¯¦æƒ…ä»‹ç» (è¯»å–æ–°å­—æ®µ description)
-            Column.alignItems(HorizontalAlign.Start);
-        }, Column);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Row.create();
-            Row.width('100%');
-            Row.justifyContent(FlexAlign.Center);
-            Row.padding(20);
-        }, Row);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Line.create();
-            Line.width(20);
-            Line.height(1);
-            Line.backgroundColor('#CCC');
-        }, Line);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(' å®è´è¯¦æƒ… ');
-            Text.fontSize(14);
-            Text.fontColor('#999');
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Line.create();
-            Line.width(20);
-            Line.height(1);
-            Line.backgroundColor('#CCC');
-        }, Line);
-        Row.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(this.product.description);
-            Text.fontSize(15);
-            Text.lineHeight(26);
-            Text.fontColor('#333');
-            Text.padding(16);
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // è¯¦æƒ…å›¾å±•ç¤º
-            ForEach.create();
-            const forEachItemGenFunction = _item => {
-                const img = _item;
-                this.observeComponentCreation2((elmtId, isInitialRender) => {
-                    Image.create(img);
-                    Image.width('100%');
-                    Image.objectFit(ImageFit.Cover);
-                    Image.margin({ bottom: 10 });
-                }, Image);
-            };
-            this.forEachUpdateFunction(elmtId, this.product.detailImages, forEachItemGenFunction);
-        }, ForEach);
-        // è¯¦æƒ…å›¾å±•ç¤º
-        ForEach.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Blank.create();
-            Blank.height(80);
-        }, Blank);
-        Blank.pop();
-        // 4. è¯¦æƒ…ä»‹ç» (è¯»å–æ–°å­—æ®µ description)
-        Column.pop();
-        Column.pop();
-        Scroll.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // åº•éƒ¨æŒ‰é’®
-            Row.create();
-            // åº•éƒ¨æŒ‰é’®
-            Row.width('100%');
-            // åº•éƒ¨æŒ‰é’®
-            Row.backgroundColor(Color.White);
-        }, Row);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Button.createWithLabel('ç«‹å³è´­ä¹°');
-            Button.type(ButtonType.Normal);
-            Button.backgroundColor('#FF5000');
-            Button.fontColor(Color.White);
-            Button.width('100%');
-            Button.height(50);
-            Button.onClick(() => { console.info('Buy'); });
-        }, Button);
-        Button.pop();
-        // åº•éƒ¨æŒ‰é’®
-        Row.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            // è¿”å›žæŒ‰é’®
-            Row.create();
-            // è¿”å›žæŒ‰é’®
-            Row.width('100%');
-            // è¿”å›žæŒ‰é’®
-            Row.height('100%');
-            // è¿”å›žæŒ‰é’®
-            Row.hitTestBehavior(HitTestMode.Transparent);
-            // è¿”å›žæŒ‰é’®
-            Row.alignItems(VerticalAlign.Top);
-        }, Row);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Button.createWithLabel('<');
-            Button.type(ButtonType.Circle);
-            Button.backgroundColor('#80000000');
-            Button.fontColor(Color.White);
-            Button.fontSize(18);
-            Button.width(32);
-            Button.height(32);
-            Button.margin({ top: 10, left: 16 });
-            Button.onClick(() => { router.back(); });
-        }, Button);
-        Button.pop();
-        // è¿”å›žæŒ‰é’®
-        Row.pop();
-        Stack.pop();
-    }
-    rerender() {
-        this.updateDirtyElements();
-    }
-    static getEntryName() {
-        return "ProductDetail";
-    }
-}
-registerNamedRoute(() => new ProductDetail(undefined, {}), "", { bundleName: "com.huawei.waterflow", moduleName: "entry", pagePath: "pages/ProductDetailPage", pageFullPath: "entry/src/main/ets/pages/ProductDetailPage", integratedHsp: "false", moduleType: "followWithHap" });
-//# sourceMappingURL=ProductDetailPage.js.mapÂ’Ùi hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.router.d.tsÙG/Users/zouchaoxu/WaterFlow/entry/src/main/ets/viewmodel/ProductItem.etsÙI/Users/zouchaoxu/WaterFlow/entry/src/main/ets/pages/ProductDetailPage.etsÔrB›ªmoduleName±isLocalDependency¯isNodeEntryFile§pkgPath±belongProjectPath§pkgNameªpkgVersion±dependencyPkgInfo°belongModulePath§checker¬shouldEmitJs¥entryÃÂÙ /Users/zouchaoxu/WaterFlow/entryº/Users/zouchaoxu/WaterFlow¥entry¥1.0.0Ô  Ù /Users/zouchaoxu/WaterFlow/entryÔrCÜ ®¬getNodeCount²getIdentifierCount®getSymbolCount¬getTypeCountµgetInstantiationCountµgetRelationCacheSizes±isUndefinedSymbol±isArgumentsSymbol¯isUnknownSymbol¯getMergedSymbol®getDiagnostics´getGlobalDiagnostics´getRecursionIdentity¶getUnmatchedProperties¹getTypeOfSymbolAtLocation¯getTypeOfSymbolÙ(getSymbolsOfParameterPropertyDeclaration·getDeclaredTypeOfSymbol³getPropertiesOfType±getPropertyOfTypeÙ"getPrivateIdentifierPropertyOfType·getTypeOfPropertyOfType²getIndexInfoOfType³getIndexInfosOfTypeºgetIndexInfosOfIndexSymbol³getSignaturesOfType²getIndexTypeOfType¬getIndexType¬getBaseTypes¸getBaseTypeOfLiteralType®getWidenedType³getTypeFromTypeNode°getParameterTypeÙ$getParameterIdentifierNameAtPosition¸getPromisedTypeOfPromise®getAwaitedType¸getReturnTypeOfSignature®isNullableType¯getNullableType²getNonNullableType²getNonOptionalType°getTypeArguments®typeToTypeNodeÙ$indexInfoToIndexSignatureDeclaration¿signatureToSignatureDeclaration²symbolToEntityName²symbolToExpression¬symbolToNodeÙ!symbolToTypeParameterDeclarations¼symbolToParameterDeclarationºtypeParameterToDeclaration±getSymbolsInScope³getSymbolAtLocation·getIndexInfosAtLocationÙ!getShorthandAssignmentValueSymbolÙ#getExportSpecifierLocalTargetSymbol·getExportSymbolOfSymbol±getTypeAtLocationºgetTypeAtLocationForLinterÙ tryGetTypeAtLocationWithoutCheckºgetTypeOfAssignmentPatternÙ*getPropertySymbolOfDestructuringAssignment±signatureToString¬typeToString®symbolToStringµtypePredicateToString®writeSignature©writeType«writeSymbol²writeTypePredicate¼getAugmentedPropertiesOfType®getRootSymbols²getSymbolOfExpando±getContextualTypeÙ(getContextualTypeForObjectLiteralElementÙ#getContextualTypeForArgumentAtIndexÙ getContextualTypeForJsxAttribute²isContextSensitiveÙ!getTypeOfPropertyOfContextualTypeµgetFullyQualifiedNameÙ#tryGetResolvedSignatureWithoutCheck´getResolvedSignatureÙ/getResolvedSignatureForStringLiteralCompletionsÙ$getResolvedSignatureForSignatureHelpµgetExpandedParameters¹hasEffectiveRestParameterºcontainsArgumentsReference°getConstantValueµisValidPropertyAccessÙ#isValidPropertyAccessForCompletions»getSignatureFromDeclarationºisImplementationOfOverload¹getImmediateAliasedSymbol°getAliasedSymbol¯getEmitResolver²getExportsOfModule¿getExportsAndPropertiesOfModuleÙ forEachExportAndPropertyOfModule¯getSymbolWalker±getAmbientModules¹getJsxIntrinsicTagNamesAt³isOptionalParameter»tryGetMemberInModuleExportsÙ(tryGetMemberInModuleExportsAndProperties´tryFindAmbientModuleÙ(tryFindAmbientModuleWithoutAugmentations¯getApparentType¬getUnionType²isTypeAssignableTo³createAnonymousType¯createSignature¬createSymbol¯createIndexInfoªgetAnyType­getStringType­getNumberType±createPromiseType¯createArrayType¹getElementTypeOfArrayType®getBooleanType¬getFalseType«getTrueType«getVoidType°getUndefinedType«getNullType¯getESSymbolType¬getNeverType¯getOptionalType®getPromiseType²getPromiseLikeType´getAsyncIterableType²isSymbolAccessible«isArrayType«isTupleType¯isArrayLikeTypeÙ#isTypeInvalidDueToUnionDiscriminantºgetExactOptionalProperties¿getAllPossiblePropertiesOfTypesÙ(getSuggestedSymbolForNonexistentPropertyÙ#getSuggestionForNonexistentPropertyÙ,getSuggestedSymbolForNonexistentJSXAttributeÙ&getSuggestedSymbolForNonexistentSymbolÙ!getSuggestionForNonexistentSymbolÙ&getSuggestedSymbolForNonexistentModuleÙ!getSuggestionForNonexistentExportÙ+getSuggestedSymbolForNonexistentClassMember·getBaseConstraintOfType»getDefaultFromTypeParameter«resolveName¯getJsxNamespaceµgetJsxFragmentFactory¸getAccessibleSymbolChain»getTypePredicateOfSignature¹resolveExternalModuleName»resolveExternalModuleSymbol°tryGetThisTypeAt¹getTypeArgumentConstraint¸getSuggestionDiagnostics¸runWithCancellationTokenÙ3getLocalTypeParametersOfClassOrInterfaceOrTypeAlias´isDeclarationVisible´isPropertyAccessible»getTypeOnlyAliasDeclaration¿getMemberOverrideModifierStatusÙ!isTypeParameterPossiblyReferenced²getConstEnumRelate´clearConstEnumRelateµdeleteConstEnumRelateÙ$getTypeArgumentsForResolvedSignatureµgetCheckedSourceFilesÙ"collectHaveTsNoCheckFilesForLinter·clearQualifiedNameCache®isStaticRecord²isStaticSourceFileÔ  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  ÃÃÚ7import router from '@ohos.router';
-import ProductItem from '../viewmodel/ProductItem';
-
-@Entry
-@Component
-struct ProductDetail {
-  // ä¿®å¤ç‚¹ï¼šè¿™é‡Œå¿…é¡»å¡«æ»¡8ä¸ªå‚æ•°ï¼Œå¯¹åº” ProductItem çš„æž„é€ å‡½æ•°
-  @State product: ProductItem = new ProductItem(
-    $r('app.media.loading'),
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    []
-  );
-
-  aboutToAppear() {
-    const params = router.getParams();
-    if (params) {
-      this.product = params as ProductItem;
-    }
-  }
-
-  build() {
-    Stack({ alignContent: Alignment.BottomEnd }) {
-      Scroll() {
-        Column() {
-          // 1. é¡¶éƒ¨å¤§å›¾
-          Stack({ alignContent: Alignment.BottomEnd }) {
-            Image(this.product.image_url)
-              .width('100%')
-              .height(350)
-              .objectFit(ImageFit.Cover)
-
-            Text('1/5')
-              .fontSize(12)
-              .fontColor(Color.White)
-              .backgroundColor('#80000000')
-              .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-              .borderRadius(12)
-              .margin({ right: 16, bottom: 16 })
-          }
-
-          // 2. ä»·æ ¼ä¸Žé”€é‡
-          Column() {
-            Row() {
-              Text('Â¥').fontSize(16).fontColor('#FF5000').baselineOffset(-4).fontWeight(FontWeight.Bold)
-              Text(this.product.price.replace(/[^\d.]/g, ''))
-                .fontSize(28)
-                .fontColor('#FF5000')
-                .fontWeight(FontWeight.Bold)
-                .margin({ right: 8 })
-              Text('åˆ¸åŽ').fontSize(12).fontColor('#FF5000').backgroundColor('#FFE4D0').padding({left:4, right:4, top:1, bottom:1}).borderRadius(2)
-              Blank()
-              Text('å·²å”® 98+').fontSize(12).fontColor('#999')
-            }.width('100%').alignItems(VerticalAlign.Bottom).margin({ bottom: 8 })
-
-            Row() {
-              Text('ä¼˜æƒ å‰ Â¥' + (parseFloat(this.product.price.replace(/[^\d.]/g, '') || '0') * 1.2).toFixed(0))
-                .fontSize(12)
-                .fontColor('#999')
-                .decoration({ type: TextDecorationType.LineThrough })
-            }.width('100%')
-          }
-          .padding(16)
-          .backgroundColor(Color.White)
-
-          // 3. æ ‡é¢˜
-          Column() {
-            Text(this.product.name)
-              .fontSize(18)
-              .fontWeight(FontWeight.Bold)
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .lineHeight(24)
-              .margin({ bottom: 8 })
-
-            Row({ space: 8 }) {
-              Text('æžé€Ÿé€€æ¬¾').fontSize(10).fontColor('#FF0036').border({ width: 1, color: '#FF0036' }).padding(2).borderRadius(2)
-              Text('åŒ…é‚®').fontSize(10).fontColor('#FF0036').border({ width: 1, color: '#FF0036' }).padding(2).borderRadius(2)
-            }.width('100%')
-          }
-          .padding({ left: 16, right: 16, bottom: 16 })
-          .backgroundColor(Color.White)
-
-          Divider().strokeWidth(8).color('#F5F5F5')
-
-          // 4. è¯¦æƒ…ä»‹ç» (è¯»å–æ–°å­—æ®µ description)
-          Column() {
-            Row() {
-              Line().width(20).height(1).backgroundColor('#CCC')
-              Text(' å®è´è¯¦æƒ… ').fontSize(14).fontColor('#999')
-              Line().width(20).height(1).backgroundColor('#CCC')
-            }.width('100%').justifyContent(FlexAlign.Center).padding(20)
-
-            Text(this.product.description)
-              .fontSize(15)
-              .lineHeight(26)
-              .fontColor('#333')
-              .padding(16)
-
-            // è¯¦æƒ…å›¾å±•ç¤º
-            ForEach(this.product.detailImages, (img: ResourceStr) => {
-              Image(img)
-                .width('100%')
-                .objectFit(ImageFit.Cover) // âœ… è¿™é‡Œæ”¹æˆäº† objectFit
-                .margin({ bottom: 10 })
-            })
-
-            Blank().height(80)
-          }
-          .backgroundColor(Color.White)
-          .width('100%')
-          .alignItems(HorizontalAlign.Start)
-        }
-        .width('100%')
-        .backgroundColor('#F5F5F5')
-      }
-      .width('100%')
-      .height('100%')
-      .scrollBar(BarState.Off)
-
-      // åº•éƒ¨æŒ‰é’®
-      Row() {
-        Button('ç«‹å³è´­ä¹°')
-          .type(ButtonType.Normal)
-          .backgroundColor('#FF5000')
-          .fontColor(Color.White)
-          .width('100%')
-          .height(50)
-          .onClick(() => { console.info('Buy') })
-      }
-      .width('100%')
-      .backgroundColor(Color.White)
-
-      // è¿”å›žæŒ‰é’®
-      Row() {
-        Button('<')
-          .type(ButtonType.Circle)
-          .backgroundColor('#80000000')
-          .fontColor(Color.White)
-          .fontSize(18)
-          .width(32)
-          .height(32)
-          .margin({ top: 10, left: 16 })
-          .onClick(() => { router.back(); })
-      }
-      .width('100%')
-      .height('100%')
-      .hitTestBehavior(HitTestMode.Transparent)
-      .alignItems(VerticalAlign.Top)
-    }
-  }
-}ÀÔrD’¬@ohos.router¸../viewmodel/ProductItemÔrE—ªassertions¨external¢id¤meta±moduleSideEffectsªresolvedByµsyntheticNamedExportsAÃÙi hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.router.d.tsÔrF‘¯hostModulesInfo’ÔrG’²hostDependencyName®hostModuleName¬@ohos.router¥entryG¬@ohos.router¥entryÃªoh-resolveÂEAÂÙG/Users/zouchaoxu/WaterFlow/entry/src/main/ets/viewmodel/ProductItem.etsAÃªoh-resolveÂ“ÔrH–§version¤fileªsourceRoot§sources¥names¨mappings´ProductDetailPage.js ‘µProductDetailPage.etsÜ3–”    ”  ”  ”  ”!  !”"  "–”   ” ” ” ”2 2”3 3’” ” ‘”  Ü ”6  ”: $”ÌE /”Ì² 	”Ì´ 	”Ì¶ 
-”Ì¸ 
-”Ìº ”Ì¼ ”Ì¾ ”ÌÀ ”ÌÂ ”ÌÄ ”ÌÆ ”ÌÈ ”ÌÊ ”ÌÌ ”ÌÍ ‘” 3’” 	” ’” 	” ’” ” ™” ” 
-” ” ” ” ”' #”) %”* &”” ” ” ” —” ” 
-” ” ” ”! *”" +‘”	 ’” ” ‘” š” ” 	” 
-” ”' ”) ”2 #”3 $”< -”> /’” ” –” ” ” Ìx” Ìx” Ìx” Ìx–” ” ” Ìy” Ìy” Ìy”  Ìy˜” ” ” Ìz” Ìz” Ìz”% Ìz”& Ìz”) Ìz’” ” –” ” ” Ìu	” Ìu” Ìu” Ìu–” ” ” Ìv	”" Ìv”# Ìv”, Ìv"’” 
-” š” 
-” ” ” ”' ”)  ”2 )”3 *”< 3”> 5˜” ” ” ” ” ”% ”& ”/ (–” ” ”  ”  ”  ”  –” ” ” !” !” !” !˜” ” ” "” "” "”$ "!”% ""”* "'”” $” $” $” $–” $” $” %” %” %” %˜” $” $” &” &” &”  &”! &”& &$–” $” $” '”  '”! '”, '*Ü ” $” $” (” (” (” (” (”! (”# (!”% (#”* ((”, (*”. (,”0 (.”3 (1”5 (3”6 (4”8 (6”> (<”Ì@ (>”ÌA (?”ÌC (ÌA–” $” $” )” )” )”  )ž” $” $” *” *” *” *” *”! *”# *!”% *#”+ *)”- *+”/ *-”1 */’” $” $’” 
-” ’” 
-” ’” -
-” -’” .
-” .’” -
-” -–” .
-” .” ÌB” ÌB” ÌB” ÌB’” -
-” -˜” .
-” .” ÌC”" ÌC”# ÌC”( ÌC ”) ÌC!”. ÌC&’” /” /–” /” /” 9” 9” 9” 9˜” /” /” 9” 9&” 9'”( 94”) 95”/ 9;š” /” /” 9=” 9ÌC” 9ÌD” 9ÌF” 9ÌL”! 9ÌN”" 9ÌO”$ 9ÌQ”” 0” 0” 0” 0–” 0” 0” 0” 0 ” 0!” 0#–” 0” 0” 0%” 0.” 0/”$ 08—” 0” 0” 0:” 0ÌH”  0ÌI”! 0ÌJ”" 0ÌK˜” 0” 0” 0ÌM” 0ÌW” 0ÌX”& 0Ìb”' 0Ìc”+ 0Ìg’” 0” 0Ÿ” 1” 1” 1” 1” 1”$ 1”% 1 ”* 1%”+ 1&”2 1-”3 1.”< 17”> 19”Ì@ 1;”ÌA 1<–” 1” 1” 2” 2” 2” 2–” 1” 1” 3” 3” 3”$ 3$˜” 1” 1” 4” 4” 4”& 4&”' 4'”+ 4+š” 1” 1” 5” 5” 5” 5” 5”! 5!”" 5"”$ 5$’” 1” 1”” 6” 6” 6” 6–” 6” 6” 6” 6!” 6"” 6$–” 6” 6” 6&” 6/” 60”$ 69–” 6” 6” 6;”  6ÌJ”! 6ÌK”* 6ÌTÜ ” 6” 6” 6ÌV” 6Ì]” 6Ì^” 6Ì_” 6Ìc”! 6Ìd”" 6Ìe”$ 6Ìg”) 6Ìl”+ 6Ìm”, 6Ìn”. 6Ìp”1 6Ìs”3 6Ìt”4 6Ìu”6 6Ìw”< 6Ì}”> 6Ì~”? 6Ì”ÌA 6Ì€–” 6” 6” 6Ì‚” 6ÌŽ” 6Ì” 6Ì’” 6” 6’” 7” 7’” 7” 7”” 8” 8” 8”  8–” 8” 8” 8” 8%” 8&” 8(–” 8” 8” 8*” 83” 84”! 8:’” 8” 8’” /” /’” ;” ;–” ;” ;” Ì@” Ì@” Ì@” Ì@Ü ” <” <” <” <”" <”# <”- <(”. <)”2 <-”3 <.”: <5”; <6”Ì@ <;”ÌA <<”ÌH <ÌC”ÌI <ÌD”ÌR <ÌM”ÌT <ÌO”ÌV <ÌQ”ÌW <ÌR”Ì[ <ÌV”Ì^ <ÌY”Ì_ <ÌZ”Ìb <Ì]”Ìe <Ì`”Ìf <Ìa”Ìg <Ìb”Ìn <Ìi”Ìo <Ìj”Ìp <Ìk”Ìq <Ìl–” <” <” =” =” =” =–” <” <” >” >” >”! >!œ” <” <” ?” ?” ?” ?”" ?"”$ ?$”6 ?6”7 ?7”ÌB ?ÌB”ÌD ?ÌD’” <” <’” ;” ;’” -
-” -’” .
-” .’” ÌE
-” ÌE’” ÌF
-” ÌF’” ÌE
-” ÌEÜ ” ÌF
-” ÌF” ÌT” ÌT” ÌT” ÌT”! ÌT”# ÌT”% ÌT”' ÌT”, ÌT$”. ÌT&”0 ÌT(”2 ÌT*”8 ÌT0”: ÌT2”< ÌT4”> ÌT6’” ÌE
-” ÌE˜” ÌF
-” ÌF” ÌU”" ÌU”# ÌU”( ÌU ”) ÌU!”. ÌU&˜” ÌG” ÌG” ÌG” ÌG” ÌG”$ ÌG”% ÌG”) ÌG"–” ÌG” ÌG” ÌH” ÌH” ÌH” ÌH˜” ÌG” ÌG” ÌI” ÌI” ÌI”& ÌI$”' ÌI%”+ ÌI)–” ÌG” ÌG” ÌJ” ÌJ” ÌJ” ÌJœ” ÌG” ÌG” ÌK” ÌK” ÌK”  ÌK”( ÌK&”* ÌK(”6 ÌK4”7 ÌK5”? ÌK=”ÌA ÌK?–” ÌG” ÌG” ÌL” ÌL” ÌL” ÌLš” ÌG” ÌG” ÌM” ÌM” ÌM” ÌM”  ÌM”" ÌM ”# ÌM!”% ÌM#’” ÌG” ÌG˜” ÌO” ÌO” ÌO” ÌO” ÌO”  ÌO”! ÌO”# ÌO–” ÌO” ÌO” ÌR” ÌR” ÌR” ÌR”” ÌP” ÌP” ÌP” ÌP–” ÌP” ÌP” ÌP” ÌP#” ÌP$” ÌP&–” ÌP” ÌP” ÌP(” ÌP1” ÌP2”$ ÌP;ž” ÌP” ÌP” ÌP=” ÌPÌC” ÌPÌD” ÌPÌF” ÌPÌK”! ÌPÌM”" ÌPÌN”$ ÌPÌP”) ÌPÌU”+ ÌPÌW”4 ÌPÌ`”6 ÌPÌb–” ÌP” ÌP” ÌPÌd” ÌPÌk” ÌPÌl” ÌPÌm–” ÌP” ÌP” ÌPÌo” ÌPÌ{” ÌPÌ|” ÌPÌ}’” ÌP” ÌP”” ÌQ” ÌQ” ÌQ” ÌQ–” ÌQ” ÌQ” ÌQ” ÌQ!” ÌQ"” ÌQ$–” ÌQ” ÌQ” ÌQ&” ÌQ/” ÌQ0”$ ÌQ9ž” ÌQ” ÌQ” ÌQ;” ÌQÌA” ÌQÌB” ÌQÌD” ÌQÌI”! ÌQÌK”" ÌQÌL”$ ÌQÌN”) ÌQÌS”+ ÌQÌU”4 ÌQÌ^”6 ÌQÌ`–” ÌQ” ÌQ” ÌQÌb” ÌQÌi” ÌQÌj” ÌQÌk–” ÌQ” ÌQ” ÌQÌm” ÌQÌy” ÌQÌz” ÌQÌ{’” ÌQ” ÌQ’” ÌO” ÌO’” ÌE
-” ÌE’” ÌF
-” ÌF’” ÌW
-” ÌW–” ÌW
-” ÌW” ÌW” ÌW”  ÌW ”! ÌW!–” ÌW
-” ÌW” ÌW#” ÌW(” ÌW)”# ÌW2’” ÌY
-”* ÌY(’” ÌZ
-” ÌZ’” ÌY
-”* ÌY(˜” ÌZ
-” ÌZ” Ìq”" Ìq”# Ìq”( Ìq ”) Ìq!”. Ìq&’” ÌY
-”* ÌY(–” ÌZ
-” ÌZ” Ìr” Ìr” Ìr” Ìr’” ÌY
-”* ÌY(˜” ÌZ
-” ÌZ” Ìs” Ìs” Ìs”- Ìs%”. Ìs&”3 Ìs+’” Ì[” Ì[–” Ì[” Ì[” Ì_” Ì_” Ì_” Ì_˜” Ì[” Ì[” Ì_” Ì_*” Ì_+”( Ì_4”) Ì_5”/ Ì_;–” Ì[” Ì[” Ì_=” Ì_ÌD” Ì_ÌE” Ì_ÌG’” Ì\” Ì\–” Ì\” Ì\” Ì\” Ì\” Ì\” Ì\–” Ì\” Ì\” Ì\” Ì\%” Ì\&” Ì\'–” Ì\” Ì\” Ì\)”  Ì\8”! Ì\9”' Ì\?”” Ì]” Ì]” Ì]”  Ì]–” Ì]” Ì]” Ì]” Ì]%” Ì]&” Ì](–” Ì]” Ì]” Ì]*” Ì]3” Ì]4”! Ì]:’” Ì]” Ì]’” Ì^” Ì^–” Ì^” Ì^” Ì^” Ì^” Ì^” Ì^–” Ì^” Ì^” Ì^” Ì^%” Ì^&” Ì^'–” Ì^” Ì^” Ì^)”  Ì^8”! Ì^9”' Ì^?’” Ì[” Ì[˜” Ìa” Ìa” Ìa” Ìa” Ìa”$ Ìa”% Ìa”0 Ìa)–” Ìa” Ìa” Ìb” Ìb” Ìb” Ìb–” Ìa” Ìa” Ìc” Ìc” Ìc” Ìc–” Ìa” Ìa” Ìd” Ìd” Ìd”! Ìd–” Ìa” Ìa” Ìe” Ìe” Ìe” Ìe’” Ìa” Ìa’” Ìg” Ìg’” Ìh” Ìh”” Ìi” Ìi”! Ìi”$ Ìi–” Ìi” Ìi” Ìj” Ìj”  Ìj”& Ìj˜” Ìi” Ìi” Ìk”# Ìk”$ Ìk”, Ìk#”- Ìk$”2 Ìk)š” Ìi” Ìi” Ìl”  Ìl”! Ìl”# Ìl”) Ìl ”+ Ìl"”- Ìl$”/ Ìl&–”/ Ìh”3 Ìh”4 Ìh”; Ìh ”< Ìh!”ÌH Ìh-’” Ìg” Ìg’” Ìh” Ìh’” Ìo” Ìo–” Ìo” Ìo” Ìo” Ìo” Ìo” Ìo’” Ìo” Ìo’” ÌY
-”& ÌY(’” ÌZ
-” ÌZ’” ” ’” ” ’” Ì|” Ì|’” Ì}” Ì}	’” Ì|” Ì|–” Ì}” Ì}	” Ì†” Ì†” Ì†” Ì†’” Ì|” Ì|˜” Ì}” Ì}	” Ì‡” Ì‡”  Ì‡”% Ì‡”& Ì‡”+ Ì‡"”” Ì~” Ì~”# Ì~”) Ì~˜” Ì~” Ì~” Ì” Ì” Ì”" Ì”# Ì”) Ì!–” Ì~” Ì~” Ì€”" Ì€”# Ì€”, Ì€$˜” Ì~” Ì~” Ì” Ì” Ì”" Ì”# Ì”( Ì –” Ì~” Ì~” Ì‚” Ì‚” Ì‚” Ì‚–” Ì~” Ì~” Ìƒ” Ìƒ” Ìƒ” ÌƒÜ ” Ì~” Ì~” Ì„” Ì„” Ì„” Ì„”  Ì„”# Ì„”* Ì„"”+ Ì„#”/ Ì„'”0 Ì„(”5 Ì„-”6 Ì„.”7 Ì„.”8 Ì„/”9 Ì„0’” Ì~” Ì~’” Ì|” Ì|’” Ì}” Ì}	’” Ì‰” Ì‰’” ÌŠ” ÌŠ	’” Ì‰” Ì‰–” ÌŠ” ÌŠ	” Ì•” Ì•” Ì•” Ì•’” Ì‰” Ì‰–” ÌŠ” ÌŠ	” Ì–” Ì–” Ì–” Ì–’” Ì‰” Ì‰˜” ÌŠ” ÌŠ	” Ì—” Ì—”  Ì—”+ Ì—"”, Ì—#”7 Ì—.’” Ì‰” Ì‰˜” ÌŠ” ÌŠ	” Ì˜” Ì˜” Ì˜”( Ì˜”) Ì˜ ”, Ì˜#”” Ì‹” Ì‹”# Ì‹”& Ì‹˜” Ì‹” Ì‹” ÌŒ” ÌŒ” ÌŒ”" ÌŒ”# ÌŒ”) ÌŒ!–” Ì‹” Ì‹” Ì”" Ì”# Ì”. Ì&˜” Ì‹” Ì‹” ÌŽ” ÌŽ” ÌŽ”" ÌŽ”# ÌŽ”( ÌŽ –” Ì‹” Ì‹” Ì” Ì” Ì” Ì–” Ì‹” Ì‹” Ì” Ì” Ì” Ì–” Ì‹” Ì‹” Ì‘” Ì‘” Ì‘” Ì‘ž” Ì‹” Ì‹” Ì’” Ì’” Ì’” Ì’” Ì’”! Ì’”# Ì’”% Ì’”) Ì’!”+ Ì’#”- Ì’%”/ Ì’'Ÿ” Ì‹” Ì‹” Ì“” Ì“” Ì“” Ì“”  Ì“”# Ì“”) Ì“!”* Ì“"”. Ì“&”0 Ì“(”1 Ì“)”2 Ì“*”3 Ì“+’” Ì‹” Ì‹’” Ì‰” Ì‰’” ÌŠ” ÌŠ	’” ” 	‘” ÌšÔrI–§version¤file§sources®sourcesContent¥names¨mappingsÀ‘À‘ÀÜ<‘”    ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”  	 ‘”  
- ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”    ‘”  ! ‘”  " ‘”  # ‘”  $ ‘”  % ‘”  & ‘”  ' ‘”  ( ‘”  ) ‘”  * ‘”  + ‘”  , ‘”  - ‘”  . ‘”  / ‘”  0 ‘”  1 ‘”  2 ‘”  3 ‘”  4 ‘”  5 ‘”  6 ‘”  7 ‘”  8 ‘”  9 ‘”  : ‘”  ; ‘”  < ‘”  = ‘”  > ‘”  ? ‘”  Ì@ ‘”  ÌA ‘”  ÌB ‘”  ÌC ‘”  ÌD ‘”  ÌE ‘”  ÌF ‘”  ÌG ‘”  ÌH ‘”  ÌI ‘”  ÌJ ‘”  ÌK ‘”  ÌL ‘”  ÌM ‘”  ÌN ‘”  ÌO ‘”  ÌP ‘”  ÌQ ‘”  ÌR ‘”  ÌS ‘”  ÌT ‘”  ÌU ‘”  ÌV ‘”  ÌW ‘”  ÌX ‘”  ÌY ‘”  ÌZ ‘”  Ì[ ‘”  Ì\ ‘”  Ì] ‘”  Ì^ ‘”  Ì_ ‘”  Ì` ‘”  Ìa ‘”  Ìb ‘”  Ìc ‘”  Ìd ‘”  Ìe ‘”  Ìf ‘”  Ìg ‘”  Ìh ‘”  Ìi ‘”  Ìj ‘”  Ìk ‘”  Ìl ‘”  Ìm ‘”  Ìn ‘”  Ìo ‘”  Ìp ‘”  Ìq ‘”  Ìr ‘”  Ìs ‘”  Ìt ‘”  Ìu ‘”  Ìv ‘”  Ìw ‘”  Ìx ‘”  Ìy ‘”  Ìz ‘”  Ì{ ‘”  Ì| ‘”  Ì} ‘”  Ì~ ‘”  Ì ‘”  Ì€ ‘”  Ì ‘”  Ì‚ ‘”  Ìƒ ‘”  Ì„ ‘”  Ì… ‘”  Ì† ‘”  Ì‡ ‘”  Ìˆ ‘”  Ì‰ ‘”  ÌŠ ‘”  Ì‹ ‘”  ÌŒ ‘”  Ì ‘”  ÌŽ ‘”  Ì ‘”  Ì ‘”  Ì‘ ‘”  Ì’ ‘”  Ì“ ‘”  Ì” ‘”  Ì• ‘”  Ì– ‘”  Ì— ‘”  Ì˜ ‘”  Ì™ ‘”  Ìš ‘”  Ì› ‘”  Ìœ ‘”  Ì ‘”  Ìž ‘”  ÌŸ ‘”  Ì  ‘”  Ì¡ ‘”  Ì¢ ‘”  Ì£ ‘”  Ì¤ ‘”  Ì¥ ‘”  Ì¦ ‘”  Ì§ ‘”  Ì¨ ‘”  Ì© ‘”  Ìª ‘”  Ì« ‘”  Ì¬ ‘”  Ì­ ‘”  Ì® ‘”  Ì¯ ‘”  Ì° ‘”  Ì± ‘”  Ì² ‘”  Ì³ ‘”  Ì´ ‘”  Ìµ ‘”  Ì¶ ‘”  Ì· ‘”  Ì¸ ‘”  Ì¹ ‘”  Ìº ‘”  Ì» ‘”  Ì¼ ‘”  Ì½ ‘”  Ì¾ ‘”  Ì¿ ‘”  ÌÀ ‘”  ÌÁ ‘”  ÌÂ ‘”  ÌÃ ‘”  ÌÄ ‘”  ÌÅ ‘”  ÌÆ ‘”  ÌÇ ‘”  ÌÈ ‘”  ÌÉ ‘”  ÌÊ ‘”  ÌË ‘”  ÌÌ ‘”  ÌÍ ‘”  ÌÎ ‘”  ÌÏ ‘”  ÌÐ ‘”  ÌÑ ‘”  ÌÒ ‘”  ÌÓ ‘”  ÌÔ ‘”  ÌÕ ‘”  ÌÖ ‘”  Ì× ‘”  ÌØ ‘”  ÌÙ ‘”  ÌÚ ‘”  ÌÛ ‘”  ÌÜ ‘”  ÌÝ ‘”  ÌÞ ‘”  Ìß ‘”  Ìà ‘”  Ìá ‘”  Ìâ ‘”  Ìã ‘”  Ìä ‘”  Ìå ‘”  Ìæ ‘”  Ìç ‘”  Ìè ‘”  Ìé ‘”  Ìê ‘”  Ìë ‘”  Ìì ‘”  Ìí ‘”  Ìî ‘”  Ìï ‘”  Ìð ‘”  Ìñ ‘”  Ìò ‘”  Ìó ‘”  Ìô ‘”  Ìõ ‘”  Ìö ‘”  Ì÷ ‘”  Ìø ‘”  Ìù ‘”  Ìú ‘”  Ìû ‘”  Ìü ‘”  Ìý ‘”  Ìþ ‘”  Ìÿ ‘”  Í  ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í	 ‘”  Í
- ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í  ‘”  Í! ‘”  Í" ‘”  Í# ‘”  Í$ ‘”  Í% ‘”  Í& ‘”  Í' ‘”  Í( ‘”  Í) ‘”  Í* ‘”  Í+ ‘”  Í, ‘”  Í- ‘”  Í. ‘”  Í/ ‘”  Í0 ‘”  Í1 ‘”  Í2 ‘”  Í3 ‘”  Í4 ‘”  Í5 ‘”  Í6 ‘”  Í7 ‘”  Í8 ‘”  Í9 ‘”  Í: ‘”  Í; ÔrJ’§missing¦pluginÃ¦genAbcÂÔ  ÔrK”²dynamicImportCache¹exportAllDeclarationCache»exportNamedDeclarationCache«importCache’ÔrL•¤type¥start£endªspecifiers¦source±ImportDeclarationÌ€Ì¢‘ÔrM”¤type¥start£end¥local¶ImportDefaultSpecifierÌ‡ÌÔrN”¤type¥start£end¤nameªIdentifierÌ‡Ì¦routerÔrO•¤type¥start£end¥value£raw§LiteralÌ“Ì¡¬@ohos.router®'@ohos.router'L±ImportDeclarationÌ¤Ì×‘M¶ImportDefaultSpecifierÌ«Ì¶NªIdentifierÌ«Ì¶«ProductItemO§LiteralÌ¼ÌÖ¸../viewmodel/ProductItemº'../viewmodel/ProductItem'

@@ -1,37 +1,61 @@
+import ProductItem from '../viewmodel/ProductItem';
+import FlowItemComponent from './FlowItemComponent';
+import { WaterFlowDataSource } from '../viewmodel/WaterFlowDataSource';
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
-import { PRODUCTS_DATA } from '../viewmodel/MockData'; // 导入数据
-import WaterFlowDataSource from '../viewmodel/WaterFlowDataSource'; // 导入数据源
-import ProductItem from '../viewmodel/ProductItem'; // 导入模型
-import FlowItemComponent from './FlowItemComponent'; // 导入卡片组件
 
 @Component
 export default struct WaterFlowComponent {
-  // 初始化数据源，加载 MockData
-  @State dataSource: WaterFlowDataSource = new WaterFlowDataSource(PRODUCTS_DATA);
+  @StorageLink('bottomRectHeight') bottomRectHeight: number = 0;
+
+  @Prop @Watch('onListChange') productList: ProductItem[];
+  private dataSource: WaterFlowDataSource = new WaterFlowDataSource();
+
+  onListChange() {
+    this.dataSource.setDataArray(this.productList);
+    this.dataSource.notifyDataReload();
+  }
+
+  aboutToAppear() {
+    this.dataSource.setDataArray(this.productList);
+  }
 
   build() {
-    // 瀑布流容器
-    WaterFlow() {
-      // 使用 LazyForEach 进行高性能懒加载
-      LazyForEach(this.dataSource, (item: ProductItem) => {
-        FlowItem() {
-          // 渲染每一个商品卡片，并把 item 数据传进去
-          FlowItemComponent({ item: item })
+    Column() {
+      if (this.productList.length === 0) {
+        Column() {
+          Text("暂无数据").fontColor(Color.Gray).margin({top: 50})
+        }.width('100%').justifyContent(FlexAlign.Center)
+      } else {
+        WaterFlow({ footer: (): void => this.itemFoot() }) {
+          LazyForEach(this.dataSource, (item: ProductItem) => {
+            FlowItem() {
+              FlowItemComponent({ item: item })
+            }
+          }, (item: ProductItem) => item.id.toString())
         }
-      }, (item: ProductItem) => item.name) // 键值生成器
+        .layoutWeight(Const.WATER_FLOW_LAYOUT_WEIGHT)
+        .columnsTemplate(Const.WATER_FLOW_COLUMNS_TEMPLATE)
+        .columnsGap($r('app.float.water_flow_columns_gap'))
+        .rowsGap($r('app.float.water_flow_row_gap'))
+        // 优化 1: 减少底部内边距，从 100/300 改为 80 (刚好避开悬浮按钮)
+        .padding({ left: 10, right: 10, bottom: 80 })
+      }
     }
-    .columnsTemplate("1fr 1fr") // 两列布局
-    .itemConstraintSize({
-      minWidth: 0,
-      maxWidth: '100%',
-      minHeight: 0,
-      maxHeight: 'Infinity'
-    })
-    .columnsGap(10) // 列间距
-    .rowsGap(10)    // 行间距
-    .padding({ left: 10, right: 10, bottom: 20 })
-    .width(Const.FULL_WIDTH)
-    // 关键：高度设为 100% 或在父容器中自适应，否则可能显示不全
-    .height('100%')
+  }
+
+  @Builder itemFoot() {
+    // 优化 2 & 3: 使用 Flex 布局确保绝对居中，并根据系统导航栏适配高度
+    Column() {
+      Text("—— 到底了 ——")
+        .fontColor('#999999')
+        .fontSize(12)
+        .textAlign(TextAlign.Center) // 文字内部居中
+        .margin({ top: 10, bottom: 10 })
+    }
+    .width('100%') // 容器占满宽度
+    .justifyContent(FlexAlign.Center) // 垂直居中
+    .alignItems(HorizontalAlign.Center) // 水平居中
+    // 适配系统底部导航条高度，防止被黑条遮挡
+    .padding({ bottom: this.getUIContext().px2vp(this.bottomRectHeight) })
   }
 }
