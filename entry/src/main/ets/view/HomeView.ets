@@ -1,26 +1,25 @@
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
-import ClassifyComponent from '../view/ClassifyComponent';
-import SearchComponent from '../view/SearchComponent';
-import SwiperComponent from '../view/SwiperComponent';
-import WaterFlowComponent from '../view/WaterFlowComponent';
+import ClassifyComponent from './ClassifyComponent';
+import SearchComponent from './SearchComponent';
+import SwiperComponent from './SwiperComponent';
+import WaterFlowComponent from './WaterFlowComponent';
 import router from '@ohos.router';
 import ProductService from '../service/ProductService';
 import ProductItem from '../viewmodel/ProductItem';
 
-@Entry
+// [修改] 移除 @Entry，改为 @Component 并 export
 @Component
-struct HomePage {
+export struct HomeView {
   @StorageLink('topRectHeight') topRectHeight: number = 0;
   // 瀑布流的数据源
   @State productList: ProductItem[] = [];
 
-  // ✅ 修复：显式添加返回值类型 Promise<void>
   async handleCategoryChange(category: string): Promise<void> {
     // 调用 Service 层根据分类筛选数据
     this.productList = await ProductService.getProductsByCategory(category);
   }
 
-  // 处理搜索逻辑 (此前已加，保持现状)
+  // 处理搜索逻辑
   async handleSearch(keyword: string): Promise<void> {
     if (!keyword || keyword.trim() === '') return;
 
@@ -34,8 +33,8 @@ struct HomePage {
     }
   }
 
-  // ✅ 修复：显式添加返回值类型 Promise<void>
-  async onPageShow(): Promise<void> {
+  // [修改] onPageShow -> aboutToAppear
+  async aboutToAppear(): Promise<void> {
     // 确保数据已初始化
     await ProductService.initData();
     // 默认加载所有商品
@@ -75,21 +74,7 @@ struct HomePage {
         top: this.getUIContext().px2vp(this.topRectHeight)
       })
 
-      // 5. 悬浮按钮 (跳转到个人中心)
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        Text("我的")
-          .fontColor(Color.White)
-          .fontSize(14)
-          .fontWeight(FontWeight.Bold)
-      }
-      .width(60)
-      .height(60)
-      .backgroundColor(Color.Blue)
-      .position({ x: '80%', y: '85%' })
-      .shadow({ radius: 10, color: '#00000040', offsetY: 5 })
-      .onClick(() => {
-        router.pushUrl({ url: 'pages/MinePage' });
-      })
+      // [修改] 移除了原本在这里的“我的”悬浮按钮
     }
     .width('100%')
     .height('100%')

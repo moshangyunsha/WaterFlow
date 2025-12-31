@@ -1,15 +1,13 @@
 {
   "src": [
-    "pages/HomePage",
-    "pages/ProductDetailPage",
     "pages/LoginPage",
-    "pages/MinePage",
+    "pages/MainPage",
+    "pages/MerchantMainPage",
+    "pages/ProductDetailPage",
+    "pages/SearchResultPage",
     "pages/MerchantUploadPage",
-    "pages/MyFavoritesPage",
-    "pages/OrderListPage",
-    "pages/MerchantManagePage",
     "pages/MerchantEditPage",
-    "pages/SearchResultPage"
+    "pages/OrderListPage",
+    "pages/MyFavoritesPage"
   ]
 }
-

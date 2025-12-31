@@ -1,13 +1,13 @@
+// 文件位置: entry/src/main/ets/view/MineView.ets
 import router from '@ohos.router';
-import { User } from '../viewmodel/User';
+import { User } from '../viewmodel/User'; // 路径层级一致，无需修改
 import picker from '@ohos.file.picker';
 import RdbUtil from '../common/utils/RdbUtil';
-import ProductService from '../service/ProductService'; // 新增引用
+import ProductService from '../service/ProductService';
 import promptAction from '@ohos.promptAction';
 
-@Entry
-@Component
-struct MinePage {
+@Component // [修改]
+export struct MineView { // [修改] 导出名 MineView
   @StorageLink('currentUser') currentUser: User = new User(0, '', 0, 0, "");
   @State avatarUrl: string = "";
 
@@ -30,11 +30,8 @@ struct MinePage {
       });
       if (result.photoUris.length > 0) {
         let newAvatar = result.photoUris[0];
-        // 1. 更新数据库
         await RdbUtil.updateUserAvatar(this.currentUser.id, newAvatar);
-        // 2. 更新本地显示
         this.avatarUrl = newAvatar;
-        // 3. 更新全局状态
         this.currentUser.token = newAvatar;
       }
     } catch (e) {
@@ -79,12 +76,7 @@ struct MinePage {
                 router.pushUrl({ url: 'pages/MerchantUploadPage' })
               })
             }
-            // 新增：商品管理入口
-            ListItem() {
-              this.MenuCell("商品管理 (修改/删除)", () => {
-                router.pushUrl({ url: 'pages/MerchantManagePage' })
-              })
-            }
+            // 商品管理已移至主 Tab，这里作为快捷入口或移除均可，保留作为二级入口
             ListItem() {
               this.MenuCell("我的收藏", () => {
                 router.pushUrl({ url: 'pages/MyFavoritesPage' })
@@ -104,15 +96,13 @@ struct MinePage {
             }
           }
 
-          // --- 新增：重置数据按钮 ---
           ListItem() {
             this.MenuCell("重置所有数据 (清除测试数据)", async () => {
               await ProductService.clearAllData();
-              promptAction.showToast({ message: '数据已重置，Mock数据已恢复' });
-              // 退出登录
+              promptAction.showToast({ message: '数据已重置' });
               AppStorage.SetOrCreate('currentUser', new User(0, '', 0, 0, ""));
               this.avatarUrl = "";
-              router.back();
+              router.replaceUrl({ url: 'pages/LoginPage' }); // [修改] 使用 replaceUrl
             })
           }
 
@@ -120,7 +110,7 @@ struct MinePage {
             this.MenuCell("退出登录", () => {
               AppStorage.SetOrCreate('currentUser', new User(0, '', 0, 0, ""));
               this.avatarUrl = "";
-              router.back();
+              router.replaceUrl({ url: 'pages/LoginPage' }); // [修改] 使用 replaceUrl
             })
           }
         }
@@ -134,14 +124,13 @@ struct MinePage {
           Text("您尚未登录").fontSize(20).margin({ bottom: 20 })
           Button("去登录 / 注册")
             .onClick(() => {
-              router.pushUrl({ url: 'pages/LoginPage' })
+              router.replaceUrl({ url: 'pages/LoginPage' })
             })
         }
         .height('100%')
         .justifyContent(FlexAlign.Center)
       }
     }
-    // 修复了这里原本的语法错误
     .width('100%')
     .height('100%')
     .backgroundColor('#F1F3F5')

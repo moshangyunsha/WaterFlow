@@ -1,4 +1,4 @@
-import RdbUtil from '../common/utils/RdbUtil';
+import RdbUtil, { CartItem } from '../common/utils/RdbUtil';
 import ProductItem from '../viewmodel/ProductItem';
 // 引入 Mock 数据和接口
 import { MOCK_PRODUCTS, RawProductData } from '../viewmodel/MockData';
@@ -27,9 +27,17 @@ class ProductService {
     return ProductService.instance;
   }
 
+  // 公开的图片解析方法
+  public resolveImage(key: string): Resource {
+    if (LOCAL_IMAGES_MAP[key]) {
+      return LOCAL_IMAGES_MAP[key];
+    }
+    return $r('app.media.ic_holder_computer'); // 默认兜底
+  }
+
   // 图片映射处理: 将数据库里的 String Key 转换为 Resource 对象
   private mapProductList(rawList: ProductItem[]): ProductItem[] {
-    return rawList.map(item => {
+    return rawList.map((item: ProductItem) => {
       const imgStr = item.image_url as string;
       if (LOCAL_IMAGES_MAP[imgStr]) {
         item.image_url = LOCAL_IMAGES_MAP[imgStr];
@@ -54,7 +62,6 @@ class ProductService {
         } catch (error) { priceNum = 0; }
         if (isNaN(priceNum)) priceNum = 0;
 
-        // ✅ 关键修复：传入 item.category (如果 Mock 数据没定义，兜底为电子物品)
         await RdbUtil.addProduct(
           0,
           item.name,
@@ -79,7 +86,7 @@ class ProductService {
   // 搜索商品
   public async searchProducts(keyword: string): Promise<ProductItem[]> {
     if (!keyword || keyword.trim() === '') {
-      return this.getAllProducts(); // 关键字为空则返回全部
+      return this.getAllProducts();
     }
     const rawList = await RdbUtil.searchProducts(keyword);
     return this.mapProductList(rawList);
@@ -104,6 +111,21 @@ class ProductService {
     }
     const rawList = await RdbUtil.getProductsByCategory(category);
     return this.mapProductList(rawList);
+  }
+
+  // [修复] 获取购物车列表 (带图片资源映射)
+  // 必须指定返回 Promise<CartItem[]>，严禁使用 any[]
+  public async getCartList(userId: number): Promise<CartItem[]> {
+    // 1. 获取原始数据
+    const rawList: CartItem[] = await RdbUtil.getCartList(userId);
+    // 2. 映射图片
+    return rawList.map((item: CartItem) => {
+      // image_url 在数据库读取时是 string，但定义中是 ResourceStr。这里做类型断言处理。
+      // 因为我们知道 RdbUtil 返回的原始对象里这个字段存的是字符串 key。
+      const imgKey = item.image_url as string;
+      item.image_url = this.resolveImage(imgKey);
+      return item;
+    });
   }
 }
 

@@ -16,7 +16,7 @@ export default class EntryAbility extends UIAbility {
       console.error(`EntryAbility: DB Init FAILED: ${JSON.stringify(e)}`);
     }
 
-    windowStage.loadContent('pages/HomePage', (err, data) => {
+    windowStage.loadContent('pages/LoginPage', (err, data) => {
       if (err.code) {
         Logger.error('Failed to load content', JSON.stringify(err));
         return;

@@ -31,7 +31,14 @@ struct LoginPage {
 
       AppStorage.SetOrCreate<User>('currentUser', user);
       promptAction.showToast({ message: '登录成功' });
-      router.back();
+
+      // [修改] 根据角色跳转到不同的主页容器，并销毁当前登录页
+      if (user.role === 1) {
+        router.replaceUrl({ url: 'pages/MerchantMainPage' });
+      } else {
+        router.replaceUrl({ url: 'pages/MainPage' });
+      }
+
     } else {
       // 2. 登录失败，尝试自动注册
       // 注意：如果重置了数据库，这里就是注册新用户，应该成功。
@@ -39,12 +46,17 @@ struct LoginPage {
 
       if (newUser) {
         AppStorage.SetOrCreate<User>('currentUser', newUser);
-        promptAction.showToast({ message: '新用户注册并登录成功' }); // 提示语改明确一点
-        router.back();
+        promptAction.showToast({ message: '新用户注册并登录成功' });
+
+        // [修改] 注册成功同样跳转
+        if (newUser.role === 1) {
+          router.replaceUrl({ url: 'pages/MerchantMainPage' });
+        } else {
+          router.replaceUrl({ url: 'pages/MainPage' });
+        }
       } else {
         // 3. 注册也失败了
         // 如果走到这里，说明用户名在数据库里确实存在，但密码不对（因为 login 失败了）。
-        // 这意味着 resetDatabase 可能没删干净，或者你输入了已存在的用户名但输错了密码。
         promptAction.showToast({ message: '登录失败：密码错误或用户名已被占用' });
       }
     }

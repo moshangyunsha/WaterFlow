@@ -4,13 +4,15 @@ import RdbUtil from '../common/utils/RdbUtil';
 import ProductItem from '../viewmodel/ProductItem';
 import promptAction from '@ohos.promptAction';
 
-@Entry
 @Component
-struct MerchantManagePage {
+export struct MerchantProductView {
+  // [新增] 监听刷新
+  @Prop @Watch('refreshData') refreshTrigger: number = 0;
+
   @State myList: ProductItem[] = [];
   @StorageLink('currentUser') currentUser: User = new User(0, '', 0, 0, "");
 
-  async onPageShow() {
+  async aboutToAppear() {
     this.refreshData();
   }
 
@@ -31,7 +33,7 @@ struct MerchantManagePage {
         action: async () => {
           await RdbUtil.deleteProduct(item.id);
           promptAction.showToast({ message: '已删除' });
-          this.refreshData(); // 刷新列表
+          this.refreshData();
         }
       }
     })
@@ -39,12 +41,9 @@ struct MerchantManagePage {
 
   build() {
     Column() {
-      // 标题栏
       Row() {
-        Text("<") // 确保有返回图标
-          .width(24).height(24).onClick(() => router.back())
         Text("商品管理").fontSize(20).fontWeight(FontWeight.Bold).margin({ left: 15 })
-      }.width('100%').padding(15)
+      }.width('100%').padding(15).backgroundColor(Color.White)
 
       if (this.myList.length === 0) {
         Column() {
@@ -56,38 +55,24 @@ struct MerchantManagePage {
           ForEach(this.myList, (item: ProductItem) => {
             ListItem() {
               Row() {
-                // 图片
-                Image(item.image_url)
-                  .width(80).height(80).borderRadius(8).objectFit(ImageFit.Cover)
-
-                // 信息
+                Image(item.image_url).width(80).height(80).borderRadius(8).objectFit(ImageFit.Cover)
                 Column() {
                   Text(item.name).fontSize(16).maxLines(1).fontWeight(FontWeight.Bold)
                   Text(`¥${item.price}`).fontColor(Color.Red).margin({ top: 5 })
                 }
-                .alignItems(HorizontalAlign.Start)
-                .margin({ left: 10 })
-                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start).margin({ left: 10 }).layoutWeight(1)
 
-                // 操作按钮
                 Column() {
                   Button("编辑").fontSize(12).height(28).backgroundColor(Color.Blue)
-                    .onClick(() => {
-                      // 跳转到编辑页，传递商品信息
-                      router.pushUrl({ url: 'pages/MerchantEditPage', params: item })
-                    })
-
+                    .onClick(() => { router.pushUrl({ url: 'pages/MerchantEditPage', params: item }) })
                   Button("删除").fontSize(12).height(28).backgroundColor(Color.Red).margin({ top: 5 })
                     .onClick(() => this.handleDelete(item))
                 }
               }
-              .padding(10)
-              .backgroundColor(Color.White)
-              .borderRadius(10)
+              .padding(10).backgroundColor(Color.White).borderRadius(10)
             }
           })
-        }
-        .width('95%').layoutWeight(1)
+        }.width('95%').layoutWeight(1).margin({top: 10})
       }
     }
     .width('100%').height('100%').backgroundColor('#F1F3F5')
