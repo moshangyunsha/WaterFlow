@@ -1,5 +1,6 @@
+entry/build/
 # Build and output directories
-build/
+**/build/
 outputs/
 dist/
 *.hap
@@ -9,7 +10,6 @@ dist/
 node_modules/
 npm-debug.log
 yarn-error.log
-package-lock.json
 yarn.lock
 
 # IDE and Editor
@@ -34,7 +34,6 @@ hvigor_modules/
 .ohpm/
 
 # OS specific
-.DS_Store
 Thumbs.db
 *.log
 
@@ -56,3 +55,11 @@ __pycache__/
 # Environment variables
 .env
 .env.local
+
+# moshangyunsha个人工具使用的配置文件，勿删
+repomix-output.xml
+repomix-output.txt
+repomix-output.md
+
+repomix.config.json
+.repomixignore

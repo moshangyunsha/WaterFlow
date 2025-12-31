@@ -22,6 +22,7 @@ struct ProductDetail {
     height: 0
   });
 
+  @StorageLink('topRectHeight') topRectHeight: number = 0;
   @StorageLink('currentUser') currentUser: User = new User(0, '', 0, 0, "");
 
   aboutToAppear() {
@@ -221,7 +222,8 @@ struct ProductDetail {
           .height(32)
           .onClick(() => { router.back(); })
       }
-      .position({ x: 16, y: 16 })
+      .position({ x: 16, y: 16 + this.getUIContext().px2vp(this.topRectHeight) })
+      .zIndex(10)
     }
     .width('100%')
     .height('100%')
