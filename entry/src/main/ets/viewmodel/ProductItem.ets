@@ -10,6 +10,9 @@ export interface IProductItem {
   name: string;
   price: number; // 注意：这里是 number
 
+  // 新增分类字段
+  category?: string;
+
   discount?: string;
   promotion?: string;
   bonus_points?: string;
@@ -27,6 +30,9 @@ export default class ProductItem implements IProductItem {
   name: string;
   price: number;
 
+  // 新增分类字段
+  category?: string;
+
   discount: string;
   promotion: string;
   bonus_points: string;
@@ -41,6 +47,9 @@ export default class ProductItem implements IProductItem {
     this.height = props.height;
     this.name = props.name;
     this.price = props.price;
+
+    //  初始化分类，默认为'电子物品'防止空指针
+    this.category = props.category || '电子物品';
 
     this.discount = props.discount || '';
     this.promotion = props.promotion || '';

@@ -6,18 +6,21 @@
 
 import { IProductItem } from './ProductItem';
 
+// 定义分类常量，供 UploadPage 和 HomePage 使用
+export const CATEGORY_LIST: string[] = [
+  '全部', // 索引 0，用于查询所有
+  '电子物品',
+  '衣物首饰',
+  '美妆护肤',
+  '图书文娱',
+  '玩具乐器',
+  '运动户外'
+];
+
 /**
  * 首页分类标题
  */
-const classifyTitle: Resource[] = [
-  $r('app.string.title_bar_homepage'),
-  $r('app.string.title_bar_phone'),
-  $r('app.string.title_bar_computer'),
-  $r('app.string.title_bar_foods'),
-  $r('app.string.title_bar_men_wear'),
-  $r('app.string.title_bar_fresh'),
-  $r('app.string.title_bar_furniture_kitchenware')
-];
+const classifyTitle: string[] = CATEGORY_LIST;
 
 /**
  * 首页轮播图

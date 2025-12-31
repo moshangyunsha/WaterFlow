@@ -1,5 +1,4 @@
 import { CommonConstants as Const } from '../common/constants/CommonConstants';
-// ✅ 修复：确保这些组件文件存在，并且路径相对于 HomePage 是正确的
 import ClassifyComponent from '../view/ClassifyComponent';
 import SearchComponent from '../view/SearchComponent';
 import SwiperComponent from '../view/SwiperComponent';
@@ -12,9 +11,16 @@ import ProductItem from '../viewmodel/ProductItem';
 @Component
 struct HomePage {
   @StorageLink('topRectHeight') topRectHeight: number = 0;
+  // 瀑布流的数据源
   @State productList: ProductItem[] = [];
 
-  // 处理搜索逻辑
+  // ✅ 修复：显式添加返回值类型 Promise<void>
+  async handleCategoryChange(category: string): Promise<void> {
+    // 调用 Service 层根据分类筛选数据
+    this.productList = await ProductService.getProductsByCategory(category);
+  }
+
+  // 处理搜索逻辑 (此前已加，保持现状)
   async handleSearch(keyword: string): Promise<void> {
     if (!keyword || keyword.trim() === '') return;
 
@@ -28,38 +34,48 @@ struct HomePage {
     }
   }
 
-  async onPageShow() {
-    // 业务逻辑放在这里，不要放在 build() 里面
+  // ✅ 修复：显式添加返回值类型 Promise<void>
+  async onPageShow(): Promise<void> {
+    // 确保数据已初始化
     await ProductService.initData();
+    // 默认加载所有商品
     this.productList = await ProductService.getAllProducts();
   }
 
   build() {
     Stack({ alignContent: Alignment.Top }) {
+      // 背景图
       Image($r('app.media.ic_app_background'))
         .width(Const.FULL_WIDTH)
         .height($r('app.float.image_background_height'))
         .objectFit(ImageFit.Cover)
 
       Column() {
+        // 1. 搜索栏
         SearchComponent({
           onSearch: (val: string) => this.handleSearch(val)
         })
 
-        ClassifyComponent()
+        // 2. 分类栏
+        ClassifyComponent({
+          onCategoryChange: (cat: string) => this.handleCategoryChange(cat)
+        })
+
+        // 3. 轮播图
         SwiperComponent()
 
-        // 传递数据给瀑布流
-        // 这里只能写 UI 组件，不能写 console.log 或 if 语句(除非是 ArkTS 条件渲染)
+        // 4. 瀑布流列表
         WaterFlowComponent({ productList: this.productList })
           .layoutWeight(1)
       }
       .padding({
         left: $r('app.float.home_margin_left'),
         right: $r('app.float.home_margin_right'),
+        // 适配沉浸式状态栏的高度
         top: this.getUIContext().px2vp(this.topRectHeight)
       })
 
+      // 5. 悬浮按钮 (跳转到个人中心)
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         Text("我的")
           .fontColor(Color.White)

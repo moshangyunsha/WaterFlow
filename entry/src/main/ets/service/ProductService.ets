@@ -48,18 +48,13 @@ class ProductService {
         let priceNum = 0;
         try {
           if (item.price) {
-            // 解析价格: "¥4088" -> 4088
             const numStr = item.price.replace(/[^\d.]/g, '');
             priceNum = parseFloat(numStr);
           }
-        } catch (error) {
-          priceNum = 0;
-        }
-
+        } catch (error) { priceNum = 0; }
         if (isNaN(priceNum)) priceNum = 0;
 
-        // ✅ 关键修复：传入 item.description
-        // RdbUtil.addProduct 的最后一个参数现在是 description
+        // ✅ 关键修复：传入 item.category (如果 Mock 数据没定义，兜底为电子物品)
         await RdbUtil.addProduct(
           0,
           item.name,
@@ -67,7 +62,8 @@ class ProductService {
           item.imageKey,
           300,
           300 + Math.random() * 200,
-          item.description // 写入详细介绍文案
+          item.description,
+          item.category || '电子物品'
         );
       }
       console.info('ProductService: Mock Data inserted.');
@@ -99,6 +95,15 @@ class ProductService {
   public async clearAllData(): Promise<void> {
     await RdbUtil.resetDatabase();
     await this.initData();
+  }
+
+  // 按分类查询
+  public async getProductsByCategory(category: string): Promise<ProductItem[]> {
+    if (!category || category === '全部') {
+      return this.getAllProducts();
+    }
+    const rawList = await RdbUtil.getProductsByCategory(category);
+    return this.mapProductList(rawList);
   }
 }
 

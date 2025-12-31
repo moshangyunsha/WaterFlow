@@ -35,7 +35,7 @@ class RdbUtil {
       await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS USER (ID INTEGER PRIMARY KEY AUTOINCREMENT, USERNAME TEXT, PASSWORD TEXT, ROLE INTEGER, BALANCE REAL, AVATAR TEXT)`);
 
       // 2. 商品表 (【关键修改】增加了 DESCRIPTION 字段)
-      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS PRODUCT (ID INTEGER PRIMARY KEY AUTOINCREMENT, MERCHANT_ID INTEGER, NAME TEXT, PRICE REAL, IMAGE_URL TEXT, WIDTH INTEGER, HEIGHT INTEGER, DESCRIPTION TEXT)`);
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS PRODUCT (ID INTEGER PRIMARY KEY AUTOINCREMENT, MERCHANT_ID INTEGER, NAME TEXT, PRICE REAL, IMAGE_URL TEXT, WIDTH INTEGER, HEIGHT INTEGER, DESCRIPTION TEXT, CATEGORY TEXT)`);
 
       // 3. 收藏表
       await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS FAVORITE (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_ID INTEGER, UNIQUE(USER_ID, PRODUCT_ID))`);
@@ -120,7 +120,7 @@ class RdbUtil {
   }
 
   // --- 上架/插入商品 (【关键修改】增加 description 参数) ---
-  async addProduct(merchantId: number, name: string, price: number, imgUrl: string, width: number = 300, height: number = 300, description: string = "") {
+  async addProduct(merchantId: number, name: string, price: number, imgUrl: string, width: number = 300, height: number = 300, description: string = "", category: string = "电子物品") {
     if (!this.rdbStore) return;
     try {
       const value: relationalStore.ValuesBucket = {
@@ -130,13 +130,35 @@ class RdbUtil {
         IMAGE_URL: imgUrl,
         WIDTH: width,
         HEIGHT: height,
-        DESCRIPTION: description // 写入详情
+        DESCRIPTION: description,
+        CATEGORY: category
       };
       await this.rdbStore.insert("PRODUCT", value);
     } catch (err) { console.error(`Add product failed: ${err.message}`); }
   }
 
-  // --- 获取所有商品 (【关键修改】读取 DESCRIPTION) ---
+  // --- 通用行转对象方法 (私有辅助，减少重复代码) ---
+  private rowToProduct(rs: relationalStore.ResultSet): ProductItem {
+    let desc = "";
+    let cat = "电子物品";
+    try { desc = rs.getString(rs.getColumnIndex("DESCRIPTION")); } catch(e){}
+    try { cat = rs.getString(rs.getColumnIndex("CATEGORY")); } catch(e){}
+
+    return new ProductItem({
+      id: rs.getLong(rs.getColumnIndex("ID")),
+      merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+      name: rs.getString(rs.getColumnIndex("NAME")),
+      price: rs.getDouble(rs.getColumnIndex("PRICE")),
+      image_url: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+      width: rs.getLong(rs.getColumnIndex("WIDTH")),
+      height: rs.getLong(rs.getColumnIndex("HEIGHT")),
+      description: desc,
+      category: cat, // ✅ 读取分类
+      detailImages: []
+    });
+  }
+
+  // --- 获取所有商品 (✅ 修改：使用辅助方法) ---
   async getAllProducts(): Promise<ProductItem[]> {
     if (!this.rdbStore) return [];
     try {
@@ -144,30 +166,34 @@ class RdbUtil {
       predicates.orderByDesc("ID");
       let rs = await this.rdbStore.query(predicates);
       let list: ProductItem[] = [];
-
       while (rs.goToNextRow()) {
-        // 安全读取 description，防止旧表结构报错
-        let desc = "";
-        try { desc = rs.getString(rs.getColumnIndex("DESCRIPTION")); } catch(e){}
-
-        list.push(new ProductItem({
-          id: rs.getLong(rs.getColumnIndex("ID")),
-          merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
-          name: rs.getString(rs.getColumnIndex("NAME")),
-          price: rs.getDouble(rs.getColumnIndex("PRICE")),
-          image_url: rs.getString(rs.getColumnIndex("IMAGE_URL")),
-          width: rs.getLong(rs.getColumnIndex("WIDTH")),
-          height: rs.getLong(rs.getColumnIndex("HEIGHT")),
-          description: desc, // 赋值给对象
-          detailImages: []
-        }));
+        list.push(this.rowToProduct(rs));
       }
       rs.close();
       return list;
     } catch (err) { return []; }
   }
 
+  // --- ✅ 新增：按分类获取商品 ---
+  async getProductsByCategory(category: string): Promise<ProductItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("PRODUCT");
+      // 如果是 "全部"，逻辑上应该在上层调用 getAllProducts，但这里做一个兜底
+      if (category !== '全部') {
+        predicates.equalTo("CATEGORY", category);
+      }
+      predicates.orderByDesc("ID");
 
+      let rs = await this.rdbStore.query(predicates);
+      let list: ProductItem[] = [];
+      while (rs.goToNextRow()) {
+        list.push(this.rowToProduct(rs));
+      }
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
 
   // --- 创建订单并扣款 (带事务保护) ---
   async createOrder(userId: number, productName: string, price: number, imgUrl: string): Promise<number> {
@@ -251,25 +277,9 @@ class RdbUtil {
       let predicates = new relationalStore.RdbPredicates("PRODUCT");
       predicates.equalTo("MERCHANT_ID", merchantId);
       predicates.orderByDesc("ID");
-
       let rs = await this.rdbStore.query(predicates);
       let list: ProductItem[] = [];
-      while (rs.goToNextRow()) {
-        let desc = "";
-        try { desc = rs.getString(rs.getColumnIndex("DESCRIPTION")); } catch(e){}
-
-        list.push(new ProductItem({
-          id: rs.getLong(rs.getColumnIndex("ID")),
-          merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
-          name: rs.getString(rs.getColumnIndex("NAME")),
-          price: rs.getDouble(rs.getColumnIndex("PRICE")),
-          image_url: rs.getString(rs.getColumnIndex("IMAGE_URL")),
-          width: rs.getLong(rs.getColumnIndex("WIDTH")),
-          height: rs.getLong(rs.getColumnIndex("HEIGHT")),
-          description: desc,
-          detailImages: []
-        }));
-      }
+      while (rs.goToNextRow()) list.push(this.rowToProduct(rs));
       rs.close();
       return list;
     } catch (err) { return []; }
@@ -326,9 +336,10 @@ class RdbUtil {
 
   // --- 获取收藏 (【关键修改】读取 DESCRIPTION) ---
   async getMyFavorites(userId: number): Promise<ProductItem[]> {
+    // ... (前部分逻辑不变)
     if (!this.rdbStore) return [];
     try {
-      // 1. 查收藏表获取 ID 列表
+      // ... 获取 ids
       let predicates = new relationalStore.RdbPredicates("FAVORITE");
       predicates.equalTo("USER_ID", userId);
       let rs = await this.rdbStore.query(predicates);
@@ -337,27 +348,11 @@ class RdbUtil {
       rs.close();
       if (ids.length === 0) return [];
 
-      // 2. 查商品表
       let prodPredicates = new relationalStore.RdbPredicates("PRODUCT");
       prodPredicates.in("ID", ids);
       let prodRs = await this.rdbStore.query(prodPredicates);
       let list: ProductItem[] = [];
-      while (prodRs.goToNextRow()) {
-        let desc = "";
-        try { desc = prodRs.getString(prodRs.getColumnIndex("DESCRIPTION")); } catch(e){}
-
-        list.push(new ProductItem({
-          id: prodRs.getLong(prodRs.getColumnIndex("ID")),
-          merchantId: prodRs.getLong(prodRs.getColumnIndex("MERCHANT_ID")),
-          name: prodRs.getString(prodRs.getColumnIndex("NAME")),
-          price: prodRs.getDouble(prodRs.getColumnIndex("PRICE")),
-          image_url: prodRs.getString(prodRs.getColumnIndex("IMAGE_URL")),
-          width: prodRs.getLong(prodRs.getColumnIndex("WIDTH")),
-          height: prodRs.getLong(prodRs.getColumnIndex("HEIGHT")),
-          description: desc,
-          detailImages: []
-        }));
-      }
+      while (prodRs.goToNextRow()) list.push(this.rowToProduct(prodRs));
       prodRs.close();
       return list;
     } catch (err) { return []; }
@@ -367,29 +362,11 @@ class RdbUtil {
     if (!this.rdbStore) return [];
     try {
       let predicates = new relationalStore.RdbPredicates("PRODUCT");
-      // 模糊匹配商品名称 (如果需要搜描述，可以加 .or().contains("DESCRIPTION", keyword))
       predicates.contains("NAME", keyword);
       predicates.orderByDesc("ID");
-
       let rs = await this.rdbStore.query(predicates);
       let list: ProductItem[] = [];
-
-      while (rs.goToNextRow()) {
-        let desc = "";
-        try { desc = rs.getString(rs.getColumnIndex("DESCRIPTION")); } catch(e){}
-
-        list.push(new ProductItem({
-          id: rs.getLong(rs.getColumnIndex("ID")),
-          merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
-          name: rs.getString(rs.getColumnIndex("NAME")),
-          price: rs.getDouble(rs.getColumnIndex("PRICE")),
-          image_url: rs.getString(rs.getColumnIndex("IMAGE_URL")),
-          width: rs.getLong(rs.getColumnIndex("WIDTH")),
-          height: rs.getLong(rs.getColumnIndex("HEIGHT")),
-          description: desc,
-          detailImages: []
-        }));
-      }
+      while (rs.goToNextRow()) list.push(this.rowToProduct(rs));
       rs.close();
       return list;
     } catch (err) { return []; }
