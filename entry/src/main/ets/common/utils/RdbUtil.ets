@@ -362,5 +362,37 @@ class RdbUtil {
       return list;
     } catch (err) { return []; }
   }
+
+  async searchProducts(keyword: string): Promise<ProductItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("PRODUCT");
+      // 模糊匹配商品名称 (如果需要搜描述，可以加 .or().contains("DESCRIPTION", keyword))
+      predicates.contains("NAME", keyword);
+      predicates.orderByDesc("ID");
+
+      let rs = await this.rdbStore.query(predicates);
+      let list: ProductItem[] = [];
+
+      while (rs.goToNextRow()) {
+        let desc = "";
+        try { desc = rs.getString(rs.getColumnIndex("DESCRIPTION")); } catch(e){}
+
+        list.push(new ProductItem({
+          id: rs.getLong(rs.getColumnIndex("ID")),
+          merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+          name: rs.getString(rs.getColumnIndex("NAME")),
+          price: rs.getDouble(rs.getColumnIndex("PRICE")),
+          image_url: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+          width: rs.getLong(rs.getColumnIndex("WIDTH")),
+          height: rs.getLong(rs.getColumnIndex("HEIGHT")),
+          description: desc,
+          detailImages: []
+        }));
+      }
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
 }
 export default RdbUtil.getInstance();

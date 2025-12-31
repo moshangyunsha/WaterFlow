@@ -80,6 +80,15 @@ class ProductService {
     return this.mapProductList(rawList);
   }
 
+  // 搜索商品
+  public async searchProducts(keyword: string): Promise<ProductItem[]> {
+    if (!keyword || keyword.trim() === '') {
+      return this.getAllProducts(); // 关键字为空则返回全部
+    }
+    const rawList = await RdbUtil.searchProducts(keyword);
+    return this.mapProductList(rawList);
+  }
+
   // 获取收藏 (收藏页)
   public async getMyFavorites(userId: number): Promise<ProductItem[]> {
     const rawList = await RdbUtil.getMyFavorites(userId);

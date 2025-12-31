@@ -22,25 +22,33 @@ import { CommonConstants as Const } from '../common/constants/CommonConstants';
  */
 @Component
 export default struct SearchComponent {
+  // 定义一个回调函数，当用户提交搜索时调用
+  // 这里的 onSearch 是父组件传进来的方法
+  onSearch: (value: string) => void = (value: string): void => {};
+
   build() {
     Row() {
-      Image($r('app.media.ic_search'))
-        .width($r('app.float.search_width'))
-        .height($r('app.float.search_height'))
-        .margin({
-          left: $r('app.float.search_margin_left'),
-          right: $r('app.float.search_margin_right')
+      Search({ placeholder: '搜索商品...' })
+        .searchButton('搜索')
+        .width(Const.FULL_WIDTH)
+        .height($r('app.float.search_swiper_height'))
+        .backgroundColor(Color.White)
+        .placeholderColor(Color.Gray)
+        .placeholderFont({ size: $r('app.float.small_font_size') })
+        .onSubmit((value: string) => {
+          // 触发回调
+          this.onSearch(value);
         })
-      Text($r('app.string.search_text'))
-        .fontSize($r('app.float.small_font_size'))
-        .fontColor(Color.Black)
-        .opacity(Const.SIXTY_OPACITY)
-        .fontWeight(FontWeight.Normal)
+        .onChange((value: string) => {
+          // 可选：如果想做实时搜索，也可以在这里调用
+          if(value === '') {
+            this.onSearch(''); // 清空时恢复
+          }
+        })
     }
     .width(Const.FULL_WIDTH)
-    .height($r('app.float.search_swiper_height'))
-    .borderRadius($r('app.float.search_radius'))
-    .backgroundColor(Color.White)
+    // 保持原有的外边距布局
     .margin({ top: $r('app.float.search_margin_top') })
+    .padding({ left: $r('app.float.search_margin_left'), right: $r('app.float.search_margin_right') })
   }
 }

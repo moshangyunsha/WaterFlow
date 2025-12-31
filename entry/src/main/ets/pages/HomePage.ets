@@ -14,6 +14,20 @@ struct HomePage {
   @StorageLink('topRectHeight') topRectHeight: number = 0;
   @State productList: ProductItem[] = [];
 
+  // 处理搜索逻辑
+  async handleSearch(keyword: string): Promise<void> {
+    if (!keyword || keyword.trim() === '') return;
+
+    try {
+      await router.pushUrl({
+        url: 'pages/SearchResultPage',
+        params: { keyword: keyword }
+      });
+    } catch (err) {
+      console.error(`HomePage jump failed: ${JSON.stringify(err)}`);
+    }
+  }
+
   async onPageShow() {
     // 业务逻辑放在这里，不要放在 build() 里面
     await ProductService.initData();
@@ -28,12 +42,15 @@ struct HomePage {
         .objectFit(ImageFit.Cover)
 
       Column() {
-        SearchComponent()
+        SearchComponent({
+          onSearch: (val: string) => this.handleSearch(val)
+        })
+
         ClassifyComponent()
         SwiperComponent()
 
         // 传递数据给瀑布流
-        // ✅ 修复：这里只能写 UI 组件，不能写 console.log 或 if 语句(除非是 ArkTS 条件渲染)
+        // 这里只能写 UI 组件，不能写 console.log 或 if 语句(除非是 ArkTS 条件渲染)
         WaterFlowComponent({ productList: this.productList })
           .layoutWeight(1)
       }
