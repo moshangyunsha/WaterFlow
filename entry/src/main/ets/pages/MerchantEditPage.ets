@@ -12,6 +12,9 @@ struct MerchantEditPage {
   @State price: string = '';
   @State imageUri: string = '';
 
+  // [修复] 1. 获取状态栏高度
+  @StorageLink('topRectHeight') topRectHeight: number = 0;
+
   aboutToAppear() {
     const params = router.getParams() as ProductItem;
     if (params) {
@@ -42,8 +45,6 @@ struct MerchantEditPage {
       promptAction.showToast({ message: '请补全信息' });
       return;
     }
-
-    // 调用更新接口
     let success = await RdbUtil.updateProduct(this.productId, this.title, parseFloat(this.price), this.imageUri);
 
     if (success) {
@@ -56,17 +57,29 @@ struct MerchantEditPage {
 
   build() {
     Column() {
-      // 标题
+      // [修复] 2. 为标题栏添加 Padding
       Row() {
-        Text("<").fontSize(24).onClick(() => router.back()).padding(10)
+        Text("<")
+          .fontSize(24)
+          .width(40).height(40)
+          .textAlign(TextAlign.Center)
+          .onClick(() => router.back())
         Text("编辑商品").fontSize(20).fontWeight(FontWeight.Bold)
-      }.width('100%').padding({top: 10})
+      }
+      .width('100%')
+      .padding({
+        top: 10 + this.getUIContext().px2vp(this.topRectHeight),
+        bottom: 10,
+        left: 10,
+        right: 10
+      })
+      .backgroundColor(Color.White)
 
       // 图片区域
       Image(this.imageUri || $r('app.media.ic_holder_computer'))
         .width(200).height(200).objectFit(ImageFit.Contain)
         .margin({ top: 20, bottom: 10 })
-        .onClick(() => this.selectImage()) // 点击换图
+        .onClick(() => this.selectImage())
 
       Text("点击图片更换").fontSize(12).fontColor(Color.Gray).margin({ bottom: 20 })
 

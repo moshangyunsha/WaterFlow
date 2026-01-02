@@ -8,6 +8,8 @@ import router from '@ohos.router';
 @Component
 struct OrderListPage {
   @State orderList: OrderItem[] = [];
+  // [修复] 1. 获取状态栏高度
+  @StorageLink('topRectHeight') topRectHeight: number = 0;
 
   async aboutToAppear() {
     this.refreshData();
@@ -28,7 +30,6 @@ struct OrderListPage {
     return $r('app.media.ic_holder_computer');
   }
 
-  // 获取状态文本
   getStatusText(status: number): string {
     switch (status) {
       case 0: return '待发货';
@@ -38,19 +39,17 @@ struct OrderListPage {
     }
   }
 
-  // 获取状态颜色
   getStatusColor(status: number): string {
     switch (status) {
-      case 0: return '#FF9900'; // Orange
-      case 1: return '#007DFF'; // Blue
-      case 2: return '#00AA00'; // Green
+      case 0: return '#FF9900';
+      case 1: return '#007DFF';
+      case 2: return '#00AA00';
       default: return '#999999';
     }
   }
 
-  // 确认收货逻辑
   async handleConfirmReceipt(order: OrderItem) {
-    let success = await RdbUtil.updateOrderStatus(order.id, 2); // 2 = Completed
+    let success = await RdbUtil.updateOrderStatus(order.id, 2);
     if (success) {
       promptAction.showToast({ message: '已确认收货' });
       this.refreshData();
@@ -61,10 +60,24 @@ struct OrderListPage {
 
   build() {
     Column() {
+      // [修复] 2. 为标题栏添加 Padding
       Row() {
-        Text("<").fontSize(24).onClick(() => router.back()).padding(10)
+        Text("<")
+          .fontSize(24)
+          .width(40).height(40)
+          .textAlign(TextAlign.Center)
+          .onClick(() => router.back())
+
         Text("我的订单").fontSize(20).fontWeight(FontWeight.Bold)
-      }.width('100%').padding({top: 10})
+      }
+      .width('100%')
+      .padding({
+        top: 10 + this.getUIContext().px2vp(this.topRectHeight), // 加上状态栏高度
+        bottom: 10,
+        left: 10,
+        right: 10
+      })
+      .backgroundColor(Color.White) // 设置背景色
 
       List({ space: 10 }) {
         ForEach(this.orderList, (order: OrderItem) => {
@@ -90,7 +103,6 @@ struct OrderListPage {
                 }.alignItems(HorizontalAlign.Start).layoutWeight(1)
               }
 
-              // 如果已发货，显示确认收货按钮
               if (order.status === 1) {
                 Row() {
                   Blank()
@@ -105,7 +117,7 @@ struct OrderListPage {
             .padding(10).backgroundColor(Color.White).borderRadius(10)
           }
         })
-      }.layoutWeight(1).width('95%')
+      }.layoutWeight(1).width('95%').margin({top: 10})
     }
     .width('100%').height('100%').backgroundColor('#F1F3F5')
   }

@@ -1,5 +1,4 @@
 import router from '@ohos.router';
-// 修改 1: 引用 ProductService
 import ProductService from '../service/ProductService';
 import ProductItem from '../viewmodel/ProductItem';
 import { User } from '../viewmodel/User';
@@ -8,11 +7,12 @@ import { User } from '../viewmodel/User';
 @Component
 struct MyFavoritesPage {
   @State favoriteList: ProductItem[] = [];
+  // [修复] 1. 获取状态栏高度
+  @StorageLink('topRectHeight') topRectHeight: number = 0;
 
   async aboutToAppear() {
     let user = AppStorage.Get<User>('currentUser');
     if (user && user.id) {
-      // 修改 2: 调用 Service 层的方法，获取带图片资源的商品列表
       this.favoriteList = await ProductService.getMyFavorites(user.id);
     }
   }
@@ -21,12 +21,24 @@ struct MyFavoritesPage {
     Column() {
       // 顶部标题栏
       Row() {
-        Text("<") // 如果没有这个图，可用 Text("<") 代替
-          .width(24).height(24).margin({right: 10})
+        Text("<")
+          .fontSize(24) //稍微加大一点字体方便点击
+          .width(40)    // 固定宽度增加点击区域
+          .height(40)
+          .textAlign(TextAlign.Center)
+          .margin({right: 5})
           .onClick(() => router.back())
         Text("我的收藏").fontSize(20).fontWeight(FontWeight.Bold)
       }
-      .width('100%').padding(15)
+      .width('100%')
+      // [修复] 2. 添加顶部内边距，避开状态栏
+      .padding({
+        top: 15 + this.getUIContext().px2vp(this.topRectHeight),
+        left: 15,
+        right: 15,
+        bottom: 15
+      })
+      .backgroundColor(Color.White) // 确保背景色覆盖状态栏区域
 
       if (this.favoriteList.length === 0) {
         Text("暂无收藏，快去首页逛逛吧").fontColor(Color.Gray).margin({ top: 100 })
@@ -35,7 +47,6 @@ struct MyFavoritesPage {
           ForEach(this.favoriteList, (item: ProductItem) => {
             ListItem() {
               Row() {
-                // 此时 item.image_url 已经是 Resource 类型了，可以正常显示
                 Image(item.image_url)
                   .width(80).height(80).borderRadius(8).objectFit(ImageFit.Cover)
 
@@ -51,7 +62,6 @@ struct MyFavoritesPage {
               .backgroundColor(Color.White)
               .borderRadius(10)
               .onClick(() => {
-                // 跳转详情页，此时传递的 item 包含正确的 image_url
                 router.pushUrl({ url: 'pages/ProductDetailPage', params: item })
               })
             }
