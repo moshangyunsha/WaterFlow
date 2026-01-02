@@ -5,9 +5,6 @@ import { User } from '../viewmodel/User';
 import RdbUtil from '../common/utils/RdbUtil';
 import { MOCK_PRODUCTS, RawProductData } from '../viewmodel/MockData';
 
-/**
- * 商品详情页
- */
 @Entry
 @Component
 struct ProductDetail {
@@ -24,36 +21,30 @@ struct ProductDetail {
   @StorageLink('topRectHeight') topRectHeight: number = 0;
   @StorageLink('currentUser') currentUser: User = new User(0, '', 0, 0, "");
 
-  // [新增] 是否已加入购物车状态
   @State isAddedToCart: boolean = false;
 
   async aboutToAppear() {
     const params = router.getParams();
     if (params) {
       let currentItem = params as ProductItem;
-      // 补全描述信息
       if (!currentItem.description) {
-        // 使用显式类型 RawProductData 防止推断错误
         const mockData: RawProductData | undefined = MOCK_PRODUCTS.find((item: RawProductData) => item.name === currentItem.name);
         currentItem.description = mockData?.description || '暂无详细介绍';
       }
       this.product = new ProductItem(currentItem);
 
-      // [核心修复] 检查当前商品是否已在购物车中
       if (this.currentUser.id) {
         this.isAddedToCart = await RdbUtil.hasCartItem(this.currentUser.id, this.product.id);
       }
     }
   }
 
-  // --- 加入购物车逻辑 ---
   async handleAddToCart() {
     if (!this.currentUser || this.currentUser.id === 0) {
       promptAction.showToast({ message: '请先登录' });
       return;
     }
 
-    // 双重检查
     if (this.isAddedToCart) {
       promptAction.showToast({ message: '该商品已在购物车中' });
       return;
@@ -62,7 +53,6 @@ struct ProductDetail {
     let success = await RdbUtil.addToCart(this.currentUser.id, this.product.id);
     if (success) {
       promptAction.showToast({ message: '已加入购物车' });
-      // [关键] 立即更新状态，使按钮变灰
       this.isAddedToCart = true;
     } else {
       promptAction.showToast({ message: '加入失败' });
@@ -76,20 +66,21 @@ struct ProductDetail {
       return;
     }
 
-    // 确定图片 Key (用于存库)
+    // 确定图片 Key
     let imgForDb: string;
     if (typeof this.product.image_url === 'string') {
       imgForDb = this.product.image_url;
     } else {
-      // 如果是 Resource，尝试兜底或查找 Mock
       imgForDb = 'ic_holder_computer';
     }
 
+    // [修改] 传递 merchantId
     let code = await RdbUtil.createOrder(
       this.currentUser.id,
       this.product.name,
       this.product.price,
-      imgForDb
+      imgForDb,
+      this.product.merchantId // 传入商家ID
     );
 
     if (code === 1) {
@@ -142,7 +133,6 @@ struct ProductDetail {
               }
             }.width('100%').alignItems(VerticalAlign.Bottom).margin({ bottom: 8 })
 
-            // 原价
             Row() {
               Text('价格 ¥' + (this.product.price * 1.2).toFixed(0))
                 .fontSize(12)
@@ -184,9 +174,7 @@ struct ProductDetail {
       .align(Alignment.Top)
       .backgroundColor('#F5F5F5')
 
-      // --- 底部操作栏 ---
       Row() {
-        // 收藏按钮
         Column() {
           Text("★").fontSize(20).fontColor(Color.Orange)
           Text("收藏").fontSize(10).fontColor(Color.Gray)
@@ -196,19 +184,17 @@ struct ProductDetail {
         .onClick(() => this.handleFav())
         .backgroundColor(Color.White)
 
-        // [修改] 加入购物车按钮 - 根据 isAddedToCart 状态变化
         Button(this.isAddedToCart ? "已在购物车" : "加入购物车")
           .type(ButtonType.Normal)
-          .backgroundColor(this.isAddedToCart ? '#FFCC99' : '#FF9900') // 变淡
+          .backgroundColor(this.isAddedToCart ? '#FFCC99' : '#FF9900')
           .fontColor(Color.White)
           .layoutWeight(1)
           .height(40)
           .borderRadius({ topLeft: 20, bottomLeft: 20 })
           .margin({ left: 10 })
-          .enabled(!this.isAddedToCart) // 禁用点击
+          .enabled(!this.isAddedToCart)
           .onClick(() => this.handleAddToCart())
 
-        // 立即购买按钮
         Button("立即购买")
           .type(ButtonType.Normal)
           .backgroundColor('#FF5000')
@@ -222,7 +208,6 @@ struct ProductDetail {
       .padding({ top: 10, bottom: 10, left: 15, right: 15 })
       .backgroundColor(Color.White)
 
-      // 返回悬浮按钮
       Row() {
         Button('<')
           .type(ButtonType.Circle)

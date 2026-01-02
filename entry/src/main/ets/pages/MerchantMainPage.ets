@@ -1,16 +1,15 @@
 import { MerchantProductView } from '../view/MerchantManageView';
 import { MineView } from '../view/MineView';
+import { MerchantOrderView } from '../view/MerchantOrderView'; // 引入新视图
 
 @Entry
 @Component
 struct MerchantMainPage {
   @State currentIndex: number = 0;
-  // [新增]
   @State refreshSignal: number = 0;
 
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0;
 
-  // [新增] 每次页面显示（比如发布商品回来）都触发
   onPageShow() {
     this.refreshSignal++;
   }
@@ -26,17 +25,21 @@ struct MerchantMainPage {
   build() {
     Tabs({ barPosition: BarPosition.End, index: this.currentIndex }) {
       TabContent() {
-        // [修改] 传入信号
         MerchantProductView({ refreshTrigger: this.refreshSignal })
       }.tabBar(this.TabBuilder("商品管理", 0, "📦"))
 
+      // [新增] 订单管理 Tab
+      TabContent() {
+        MerchantOrderView({ refreshTrigger: this.refreshSignal })
+      }.tabBar(this.TabBuilder("订单管理", 1, "📄"))
+
       TabContent() {
         MineView()
-      }.tabBar(this.TabBuilder("我的店铺", 1, "🏪"))
+      }.tabBar(this.TabBuilder("我的店铺", 2, "🏪"))
     }
     .onChange((index) => {
       this.currentIndex = index;
-      this.refreshSignal++; // 切 Tab 也刷新
+      this.refreshSignal++;
     })
     .barHeight(56 + this.getUIContext().px2vp(this.bottomRectHeight))
     .backgroundColor(Color.White)

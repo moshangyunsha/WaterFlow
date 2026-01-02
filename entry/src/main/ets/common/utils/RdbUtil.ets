@@ -3,29 +3,30 @@ import common from '@ohos.app.ability.common';
 import ProductItem from '../../viewmodel/ProductItem';
 import { User } from '../../viewmodel/User';
 
-// 订单接口定义
+// [修改] 订单接口定义，增加 ID, 商家ID, 状态
 export interface OrderItem {
+  id: number;           // 订单主键
+  merchantId: number;   // 商家ID
   title: string;
   price: number;
   date: string;
   imgUrl: string;
+  status: number;       // 0:待发货, 1:已发货, 2:已完成
 }
 
-// [修复] 定义购物车原始记录接口 (用于内部数据库查询)
+// 购物车原始记录接口
 interface CartRecord {
   cartId: number;
   productId: number;
   count: number;
 }
 
-// [修复] 定义购物车商品类 (继承 ProductItem，供外部 UI 使用)
-// 必须 export，因为 CartView 需要引用它作为 List 的数据源类型
+// 购物车商品类
 export class CartItem extends ProductItem {
   cartId: number;
   count: number;
 
   constructor(product: ProductItem, cartId: number, count: number) {
-    // ProductItem 实例本身符合 IProductItem 接口，可直接传给 super
     super(product);
     this.cartId = cartId;
     this.count = count;
@@ -61,8 +62,9 @@ class RdbUtil {
       // 3. 收藏表
       await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS FAVORITE (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_ID INTEGER, UNIQUE(USER_ID, PRODUCT_ID))`);
 
-      // 4. 订单表
-      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS ORDERS (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_NAME TEXT, PRICE REAL, CREATE_TIME TEXT, IMAGE_URL TEXT)`);
+      // 4. [修改] 订单表 - 增加 MERCHANT_ID 和 STATUS 字段
+      // 注意：如果已安装应用，需点击"我的-重置所有数据"触发重建，或卸载重装
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS ORDERS (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, MERCHANT_ID INTEGER, PRODUCT_NAME TEXT, PRICE REAL, CREATE_TIME TEXT, IMAGE_URL TEXT, STATUS INTEGER)`);
 
       // 5. 购物车表
       await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS CART (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_ID INTEGER, COUNT INTEGER)`);
@@ -87,7 +89,6 @@ class RdbUtil {
     }
   }
 
-  // --- 检查商品是否为空 ---
   async isProductEmpty(): Promise<boolean> {
     if (!this.rdbStore) return true;
     try {
@@ -98,7 +99,6 @@ class RdbUtil {
     } catch (e) { return true; }
   }
 
-  // --- 登录 (含头像读取) ---
   async login(username: string, password: string): Promise<User | null> {
     if (!this.rdbStore) return null;
     try {
@@ -126,7 +126,6 @@ class RdbUtil {
     } catch (err) { return null; }
   }
 
-  // --- 注册 ---
   async register(username: string, password: string, role: number): Promise<User | null> {
     if (!this.rdbStore) return null;
     try {
@@ -145,7 +144,6 @@ class RdbUtil {
     } catch (err) { return null; }
   }
 
-  // --- 上架/插入商品 ---
   async addProduct(merchantId: number, name: string, price: number, imgUrl: string, width: number = 300, height: number = 300, description: string = "", category: string = "电子物品") {
     if (!this.rdbStore) return;
     try {
@@ -163,7 +161,6 @@ class RdbUtil {
     } catch (err) { console.error(`Add product failed: ${JSON.stringify(err)}`); }
   }
 
-  // --- 通用行转对象方法 (私有辅助) ---
   private rowToProduct(rs: relationalStore.ResultSet): ProductItem {
     let desc = "";
     let cat = "电子物品";
@@ -184,7 +181,6 @@ class RdbUtil {
     });
   }
 
-  // --- 获取所有商品 ---
   async getAllProducts(): Promise<ProductItem[]> {
     if (!this.rdbStore) return [];
     try {
@@ -200,7 +196,6 @@ class RdbUtil {
     } catch (err) { return []; }
   }
 
-  // --- 按分类获取商品 ---
   async getProductsByCategory(category: string): Promise<ProductItem[]> {
     if (!this.rdbStore) return [];
     try {
@@ -209,7 +204,6 @@ class RdbUtil {
         predicates.equalTo("CATEGORY", category);
       }
       predicates.orderByDesc("ID");
-
       let rs = await this.rdbStore.query(predicates);
       let list: ProductItem[] = [];
       while (rs.goToNextRow()) {
@@ -220,9 +214,9 @@ class RdbUtil {
     } catch (err) { return []; }
   }
 
-  // --- 创建订单并扣款 ---
-  async createOrder(userId: number, productName: string, price: number, imgUrl: string): Promise<number> {
-    // 1=成功, -1=余额不足, -2=系统/数据库错误
+  // --- [修改] 创建订单 ---
+  // 增加 merchantId 参数, 初始化 status 为 0 (待发货)
+  async createOrder(userId: number, productName: string, price: number, imgUrl: string, merchantId: number): Promise<number> {
     if (!this.rdbStore) return -2;
 
     try {
@@ -246,17 +240,23 @@ class RdbUtil {
         return -1;
       }
 
+      // 1. 扣除买家余额
       const userVal: relationalStore.ValuesBucket = { BALANCE: currentBalance - price };
       await this.rdbStore.update(userVal, predicates);
 
+      // 2. 创建订单记录
       const orderVal: relationalStore.ValuesBucket = {
         USER_ID: userId,
+        MERCHANT_ID: merchantId,
         PRODUCT_NAME: productName,
         PRICE: price,
         CREATE_TIME: new Date().toLocaleString(),
-        IMAGE_URL: imgUrl
+        IMAGE_URL: imgUrl,
+        STATUS: 0 // 默认待发货
       };
       await this.rdbStore.insert("ORDERS", orderVal);
+
+      // (可选) 增加商家余额逻辑暂省略，专注于订单状态流转
 
       this.rdbStore.commit();
       return 1;
@@ -267,20 +267,24 @@ class RdbUtil {
     }
   }
 
-  // --- 获取订单 ---
+  // --- [修改] 获取买家订单 ---
   async getMyOrders(userId: number): Promise<OrderItem[]> {
     if (!this.rdbStore) return [];
     try {
       let predicates = new relationalStore.RdbPredicates("ORDERS");
       predicates.equalTo("USER_ID", userId);
+      predicates.orderByDesc("ID"); // 最新订单在前
       let rs = await this.rdbStore.query(predicates);
       let list: OrderItem[] = [];
       while (rs.goToNextRow()) {
         list.push({
+          id: rs.getLong(rs.getColumnIndex("ID")),
+          merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
           title: rs.getString(rs.getColumnIndex("PRODUCT_NAME")),
           price: rs.getDouble(rs.getColumnIndex("PRICE")),
           date: rs.getString(rs.getColumnIndex("CREATE_TIME")),
-          imgUrl: rs.getString(rs.getColumnIndex("IMAGE_URL"))
+          imgUrl: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+          status: rs.getLong(rs.getColumnIndex("STATUS"))
         });
       }
       rs.close();
@@ -288,7 +292,43 @@ class RdbUtil {
     } catch (err) { return []; }
   }
 
-  // --- 获取指定商户的商品 ---
+  // --- [新增] 获取商家收到的订单 ---
+  async getMerchantOrders(merchantId: number): Promise<OrderItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("ORDERS");
+      predicates.equalTo("MERCHANT_ID", merchantId);
+      predicates.orderByDesc("ID");
+      let rs = await this.rdbStore.query(predicates);
+      let list: OrderItem[] = [];
+      while (rs.goToNextRow()) {
+        list.push({
+          id: rs.getLong(rs.getColumnIndex("ID")),
+          merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+          title: rs.getString(rs.getColumnIndex("PRODUCT_NAME")),
+          price: rs.getDouble(rs.getColumnIndex("PRICE")),
+          date: rs.getString(rs.getColumnIndex("CREATE_TIME")),
+          imgUrl: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+          status: rs.getLong(rs.getColumnIndex("STATUS"))
+        });
+      }
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
+
+  // --- [新增] 更新订单状态 ---
+  async updateOrderStatus(orderId: number, newStatus: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      const value: relationalStore.ValuesBucket = { STATUS: newStatus };
+      let predicates = new relationalStore.RdbPredicates("ORDERS");
+      predicates.equalTo("ID", orderId);
+      await this.rdbStore.update(value, predicates);
+      return true;
+    } catch (e) { return false; }
+  }
+
   async getMerchantProducts(merchantId: number): Promise<ProductItem[]> {
     if (!this.rdbStore) return [];
     try {
@@ -303,7 +343,6 @@ class RdbUtil {
     } catch (err) { return []; }
   }
 
-  // --- 删除商品 ---
   async deleteProduct(productId: number): Promise<boolean> {
     if (!this.rdbStore) return false;
     try {
@@ -314,7 +353,6 @@ class RdbUtil {
     } catch (e) { return false; }
   }
 
-  // --- 更新商品信息 ---
   async updateProduct(productId: number, name: string, price: number, imgUrl: string, description: string = ""): Promise<boolean> {
     if (!this.rdbStore) return false;
     try {
@@ -331,7 +369,6 @@ class RdbUtil {
     } catch (e) { return false; }
   }
 
-  // --- 更新用户头像 ---
   async updateUserAvatar(userId: number, avatarUri: string): Promise<boolean> {
     if (!this.rdbStore) return false;
     try {
@@ -343,7 +380,6 @@ class RdbUtil {
     } catch (err) { return false; }
   }
 
-  // --- 添加收藏 ---
   async addFavorite(userId: number, productId: number) {
     if (!this.rdbStore) return;
     try {
@@ -352,7 +388,6 @@ class RdbUtil {
     } catch (e) { }
   }
 
-  // --- 获取收藏 ---
   async getMyFavorites(userId: number): Promise<ProductItem[]> {
     if (!this.rdbStore) return [];
     try {
@@ -388,13 +423,9 @@ class RdbUtil {
     } catch (err) { return []; }
   }
 
-  // ================= 购物车功能新增 (严格类型修复) =================
-
-  // --- 加入购物车 (支持数量叠加) ---
   async addToCart(userId: number, productId: number, count: number = 1): Promise<boolean> {
     if (!this.rdbStore) return false;
     try {
-      // 1. 查重，如果有了就数量+count
       let predicates = new relationalStore.RdbPredicates("CART");
       predicates.equalTo("USER_ID", userId).equalTo("PRODUCT_ID", productId);
       let rs = await this.rdbStore.query(predicates);
@@ -412,17 +443,13 @@ class RdbUtil {
     } catch (e) { return false; }
   }
 
-  // --- 获取购物车列表 (关联商品表) ---
-  // [修复] 返回类型改为 CartItem[]，彻底消除 any
   async getCartList(userId: number): Promise<CartItem[]> {
     if (!this.rdbStore) return [];
     try {
-      // 1. 先获取该用户的购物车记录
       let predicates = new relationalStore.RdbPredicates("CART");
       predicates.equalTo("USER_ID", userId);
       let rs = await this.rdbStore.query(predicates);
 
-      // 使用明确定义的 CartRecord 数组
       let cartItems: CartRecord[] = [];
       while(rs.goToNextRow()) {
         cartItems.push({
@@ -433,19 +460,14 @@ class RdbUtil {
       }
       rs.close();
 
-      // 2. 根据 productId 查询商品详情，并拼装结果
       let resultList: CartItem[] = [];
       for (let item of cartItems) {
         let prodPred = new relationalStore.RdbPredicates("PRODUCT");
         prodPred.equalTo("ID", item.productId);
         let prodRs = await this.rdbStore.query(prodPred);
         if (prodRs.goToFirstRow()) {
-          // 获取原始商品对象
           let product: ProductItem = this.rowToProduct(prodRs);
-
-          // [修复] 使用 new CartItem 构造强类型对象，避免使用 any
           let cartItem = new CartItem(product, item.cartId, item.count);
-
           resultList.push(cartItem);
         }
         prodRs.close();
@@ -454,7 +476,6 @@ class RdbUtil {
     } catch (e) { return []; }
   }
 
-  // --- 删除购物车项 ---
   async deleteCartItem(cartId: number): Promise<boolean> {
     if (!this.rdbStore) return false;
     try {
@@ -465,7 +486,6 @@ class RdbUtil {
     } catch(e) { return false; }
   }
 
-  // --- 检查购物车是否已存在某商品 ---
   async hasCartItem(userId: number, productId: number): Promise<boolean> {
     if (!this.rdbStore) return false;
     try {

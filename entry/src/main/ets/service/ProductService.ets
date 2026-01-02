@@ -15,6 +15,17 @@ const LOCAL_IMAGES_MAP: Record<string, Resource> = {
   'ic_app_background': $r('app.media.ic_app_background')
 };
 
+// [新增] 定义一个辅助类，解决 "Object literal must correspond to..." 报错
+class MerchantConfig {
+  user: string;
+  pass: string;
+
+  constructor(user: string, pass: string) {
+    this.user = user;
+    this.pass = pass;
+  }
+}
+
 class ProductService {
   private static instance: ProductService;
 
@@ -46,13 +57,47 @@ class ProductService {
     });
   }
 
-  // 初始化数据
+  // [核心修改] 初始化数据：创建3个默认商家并分配商品
   public async initData(): Promise<void> {
     const isEmpty = await RdbUtil.isProductEmpty();
     if (isEmpty) {
-      console.info('ProductService: Start inserting Mock Data...');
+      console.info('ProductService: Start initializing Data...');
 
-      for (const item of MOCK_PRODUCTS) {
+      // [修改] 使用类实例数组，解决 ArkTS 类型推断报错
+      const merchantAccounts: MerchantConfig[] = [
+        new MerchantConfig('testMall1', 'Mall1'),
+        new MerchantConfig('testMall2', 'Mall2'),
+        new MerchantConfig('testMall3', 'Mall3')
+      ];
+
+      const merchantIds: number[] = [];
+
+      // 2. 确保这三个商家存在，并获取他们的 ID
+      for (const acc of merchantAccounts) {
+        // 尝试登录获取 ID
+        let user = await RdbUtil.login(acc.user, acc.pass);
+
+        // 如果不存在，则注册 (Role=1 代表商家)
+        if (!user) {
+          user = await RdbUtil.register(acc.user, acc.pass, 1);
+        }
+
+        if (user) {
+          merchantIds.push(user.id);
+          console.info(`ProductService: Ensure merchant ${acc.user} exists, ID=${user.id}`);
+        }
+      }
+
+      // 如果商家创建失败（极端情况），兜底使用 ID 0
+      if (merchantIds.length === 0) merchantIds.push(0);
+
+      // 3. 插入商品，并循环分配给这几个商家
+      console.info('ProductService: Start inserting Mock Products...');
+
+      for (let i = 0; i < MOCK_PRODUCTS.length; i++) {
+        const item = MOCK_PRODUCTS[i];
+
+        // 解析价格
         let priceNum = 0;
         try {
           if (item.price) {
@@ -62,8 +107,11 @@ class ProductService {
         } catch (error) { priceNum = 0; }
         if (isNaN(priceNum)) priceNum = 0;
 
+        // [关键] 轮询分配商家ID (取模运算)
+        const assignedMerchantId = merchantIds[i % merchantIds.length];
+
         await RdbUtil.addProduct(
-          0,
+          assignedMerchantId, // 传入分配的商家ID
           item.name,
           priceNum,
           item.imageKey,
@@ -73,7 +121,7 @@ class ProductService {
           item.category || '电子物品'
         );
       }
-      console.info('ProductService: Mock Data inserted.');
+      console.info('ProductService: Mock Data inserted with merchant allocation.');
     }
   }
 
@@ -113,15 +161,10 @@ class ProductService {
     return this.mapProductList(rawList);
   }
 
-  // [修复] 获取购物车列表 (带图片资源映射)
-  // 必须指定返回 Promise<CartItem[]>，严禁使用 any[]
+  // 获取购物车列表
   public async getCartList(userId: number): Promise<CartItem[]> {
-    // 1. 获取原始数据
     const rawList: CartItem[] = await RdbUtil.getCartList(userId);
-    // 2. 映射图片
     return rawList.map((item: CartItem) => {
-      // image_url 在数据库读取时是 string，但定义中是 ResourceStr。这里做类型断言处理。
-      // 因为我们知道 RdbUtil 返回的原始对象里这个字段存的是字符串 key。
       const imgKey = item.image_url as string;
       item.image_url = this.resolveImage(imgKey);
       return item;
