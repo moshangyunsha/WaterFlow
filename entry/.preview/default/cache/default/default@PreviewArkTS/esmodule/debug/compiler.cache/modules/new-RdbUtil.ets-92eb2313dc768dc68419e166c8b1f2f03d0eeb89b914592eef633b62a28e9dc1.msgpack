@@ -1,0 +1,1156 @@
+Ôr@Ÿªassertions¤code´customTransformCache¬dependencies¢id¤meta±moduleSideEffects¬originalCode±originalSourcemap«resolvedIds®sourcemapChainµsyntheticNamedExportsµtransformDependencies®transformFiles¨cacheAstÔrAÚMªimport relationalStore from '@ohos.data.relationalStore';
+import ProductItem from '../../viewmodel/ProductItem';
+import { User } from '../../viewmodel/User';
+// è´­ç‰©è½¦å•†å“ç±»
+export class CartItem extends ProductItem {
+    constructor(product, cartId, count) {
+        super(product);
+        this.cartId = cartId;
+        this.count = count;
+    }
+}
+class RdbUtil {
+    constructor() {
+        this.rdbStore = null;
+        this.STORE_CONFIG = {
+            name: 'Mall.db',
+            securityLevel: relationalStore.SecurityLevel.S1
+        };
+    }
+    static getInstance() {
+        if (!RdbUtil.instance) {
+            RdbUtil.instance = new RdbUtil();
+        }
+        return RdbUtil.instance;
+    }
+    // --- åˆå§‹åŒ–æ•°æ®åº“ (å»ºè¡¨) ---
+    async initDB(context) {
+        if (this.rdbStore)
+            return;
+        try {
+            this.rdbStore = await relationalStore.getRdbStore(context, this.STORE_CONFIG);
+            // 1. ç”¨æˆ·è¡¨
+            await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS USER (ID INTEGER PRIMARY KEY AUTOINCREMENT, USERNAME TEXT, PASSWORD TEXT, ROLE INTEGER, BALANCE REAL, AVATAR TEXT)`);
+            // 2. å•†å“è¡¨
+            await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS PRODUCT (ID INTEGER PRIMARY KEY AUTOINCREMENT, MERCHANT_ID INTEGER, NAME TEXT, PRICE REAL, IMAGE_URL TEXT, WIDTH INTEGER, HEIGHT INTEGER, DESCRIPTION TEXT, CATEGORY TEXT)`);
+            // 3. æ”¶è—è¡¨
+            await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS FAVORITE (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_ID INTEGER, UNIQUE(USER_ID, PRODUCT_ID))`);
+            // 4. [ä¿®æ”¹] è®¢å•è¡¨ - å¢åŠ  MERCHANT_ID å’Œ STATUS å­—æ®µ
+            // æ³¨æ„ï¼šå¦‚æœå·²å®‰è£…åº”ç”¨ï¼Œéœ€ç‚¹å‡»"æˆ‘çš„-é‡ç½®æ‰€æœ‰æ•°æ®"è§¦å‘é‡å»ºï¼Œæˆ–å¸è½½é‡è£…
+            await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS ORDERS (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, MERCHANT_ID INTEGER, PRODUCT_NAME TEXT, PRICE REAL, CREATE_TIME TEXT, IMAGE_URL TEXT, STATUS INTEGER)`);
+            // 5. è´­ç‰©è½¦è¡¨
+            await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS CART (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_ID INTEGER, COUNT INTEGER)`);
+        }
+        catch (err) {
+            console.error(`RdbUtil initDB failed: ${JSON.stringify(err)}`);
+        }
+    }
+    // --- å½»åº•æ¸…ç©ºæ•°æ®åº“ (é‡ç½®ç”¨) ---
+    async resetDatabase() {
+        if (!this.rdbStore)
+            return;
+        try {
+            await this.rdbStore.executeSql('DELETE FROM USER');
+            await this.rdbStore.executeSql('DELETE FROM PRODUCT');
+            await this.rdbStore.executeSql('DELETE FROM FAVORITE');
+            await this.rdbStore.executeSql('DELETE FROM ORDERS');
+            await this.rdbStore.executeSql('DELETE FROM CART');
+            await this.rdbStore.executeSql("DELETE FROM sqlite_sequence WHERE name IN ('USER','PRODUCT','FAVORITE','ORDERS','CART')");
+        }
+        catch (e) {
+            console.error("Reset DB failed", JSON.stringify(e));
+        }
+    }
+    async isProductEmpty() {
+        if (!this.rdbStore)
+            return true;
+        try {
+            let rs = await this.rdbStore.query(new relationalStore.RdbPredicates("PRODUCT"));
+            let count = rs.rowCount;
+            rs.close();
+            return count === 0;
+        }
+        catch (e) {
+            return true;
+        }
+    }
+    async login(username, password) {
+        if (!this.rdbStore)
+            return null;
+        try {
+            let predicates = new relationalStore.RdbPredicates("USER");
+            predicates.equalTo("USERNAME", username).equalTo("PASSWORD", password);
+            let rs = await this.rdbStore.query(predicates);
+            if (rs.goToFirstRow()) {
+                let avatar = "";
+                try {
+                    avatar = rs.getString(rs.getColumnIndex("AVATAR"));
+                }
+                catch (e) { }
+                let user = new User(rs.getLong(rs.getColumnIndex("ID")), rs.getString(rs.getColumnIndex("USERNAME")), rs.getLong(rs.getColumnIndex("ROLE")), rs.getDouble(rs.getColumnIndex("BALANCE")), "");
+                user.token = avatar;
+                rs.close();
+                return user;
+            }
+            rs.close();
+            return null;
+        }
+        catch (err) {
+            return null;
+        }
+    }
+    async register(username, password, role) {
+        if (!this.rdbStore)
+            return null;
+        try {
+            let predicates = new relationalStore.RdbPredicates("USER");
+            predicates.equalTo("USERNAME", username);
+            let rs = await this.rdbStore.query(predicates);
+            if (rs.rowCount > 0) {
+                rs.close();
+                return null;
+            }
+            rs.close();
+            let balance = role === 1 ? 0 : 50000;
+            const value = {
+                USERNAME: username, PASSWORD: password, ROLE: role, BALANCE: balance, AVATAR: ""
+            };
+            let rowId = await this.rdbStore.insert("USER", value);
+            return new User(rowId, username, role, balance, "");
+        }
+        catch (err) {
+            return null;
+        }
+    }
+    async addProduct(merchantId, name, price, imgUrl, width = 300, height = 300, description = "", category = "ç”µå­ç‰©å“") {
+        if (!this.rdbStore)
+            return;
+        try {
+            const value = {
+                MERCHANT_ID: merchantId,
+                NAME: name,
+                PRICE: price,
+                IMAGE_URL: imgUrl,
+                WIDTH: width,
+                HEIGHT: height,
+                DESCRIPTION: description,
+                CATEGORY: category
+            };
+            await this.rdbStore.insert("PRODUCT", value);
+        }
+        catch (err) {
+            console.error(`Add product failed: ${JSON.stringify(err)}`);
+        }
+    }
+    rowToProduct(rs) {
+        let desc = "";
+        let cat = "ç”µå­ç‰©å“";
+        try {
+            desc = rs.getString(rs.getColumnIndex("DESCRIPTION"));
+        }
+        catch (e) { }
+        try {
+            cat = rs.getString(rs.getColumnIndex("CATEGORY"));
+        }
+        catch (e) { }
+        return new ProductItem({
+            id: rs.getLong(rs.getColumnIndex("ID")),
+            merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+            name: rs.getString(rs.getColumnIndex("NAME")),
+            price: rs.getDouble(rs.getColumnIndex("PRICE")),
+            image_url: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+            width: rs.getLong(rs.getColumnIndex("WIDTH")),
+            height: rs.getLong(rs.getColumnIndex("HEIGHT")),
+            description: desc,
+            category: cat,
+            detailImages: []
+        });
+    }
+    async getAllProducts() {
+        if (!this.rdbStore)
+            return [];
+        try {
+            let predicates = new relationalStore.RdbPredicates("PRODUCT");
+            predicates.orderByDesc("ID");
+            let rs = await this.rdbStore.query(predicates);
+            let list = [];
+            while (rs.goToNextRow()) {
+                list.push(this.rowToProduct(rs));
+            }
+            rs.close();
+            return list;
+        }
+        catch (err) {
+            return [];
+        }
+    }
+    async getProductsByCategory(category) {
+        if (!this.rdbStore)
+            return [];
+        try {
+            let predicates = new relationalStore.RdbPredicates("PRODUCT");
+            if (category !== 'å…¨éƒ¨') {
+                predicates.equalTo("CATEGORY", category);
+            }
+            predicates.orderByDesc("ID");
+            let rs = await this.rdbStore.query(predicates);
+            let list = [];
+            while (rs.goToNextRow()) {
+                list.push(this.rowToProduct(rs));
+            }
+            rs.close();
+            return list;
+        }
+        catch (err) {
+            return [];
+        }
+    }
+    // --- [ä¿®æ”¹] åˆ›å»ºè®¢å• ---
+    // å¢åŠ  merchantId å‚æ•°, åˆå§‹åŒ– status ä¸º 0 (å¾…å‘è´§)
+    async createOrder(userId, productName, price, imgUrl, merchantId) {
+        if (!this.rdbStore)
+            return -2;
+        try {
+            this.rdbStore.beginTransaction();
+            let predicates = new relationalStore.RdbPredicates("USER");
+            predicates.equalTo("ID", userId);
+            let rs = await this.rdbStore.query(predicates);
+            if (!rs.goToFirstRow()) {
+                rs.close();
+                this.rdbStore.rollBack();
+                return -2;
+            }
+            let currentBalance = rs.getDouble(rs.getColumnIndex("BALANCE"));
+            rs.close();
+            if (currentBalance < price) {
+                this.rdbStore.rollBack();
+                return -1;
+            }
+            // 1. æ‰£é™¤ä¹°å®¶ä½™é¢
+            const userVal = { BALANCE: currentBalance - price };
+            await this.rdbStore.update(userVal, predicates);
+            // 2. åˆ›å»ºè®¢å•è®°å½•
+            const orderVal = {
+                USER_ID: userId,
+                MERCHANT_ID: merchantId,
+                PRODUCT_NAME: productName,
+                PRICE: price,
+                CREATE_TIME: new Date().toLocaleString(),
+                IMAGE_URL: imgUrl,
+                STATUS: 0 // é»˜è®¤å¾…å‘è´§
+            };
+            await this.rdbStore.insert("ORDERS", orderVal);
+            // (å¯é€‰) å¢åŠ å•†å®¶ä½™é¢é€»è¾‘æš‚çœç•¥ï¼Œä¸“æ³¨äºè®¢å•çŠ¶æ€æµè½¬
+            this.rdbStore.commit();
+            return 1;
+        }
+        catch (err) {
+            this.rdbStore.rollBack();
+            return -2;
+        }
+    }
+    // --- [ä¿®æ”¹] è·å–ä¹°å®¶è®¢å• ---
+    async getMyOrders(userId) {
+        if (!this.rdbStore)
+            return [];
+        try {
+            let predicates = new relationalStore.RdbPredicates("ORDERS");
+            predicates.equalTo("USER_ID", userId);
+            predicates.orderByDesc("ID"); // æœ€æ–°è®¢å•åœ¨å‰
+            let rs = await this.rdbStore.query(predicates);
+            let list = [];
+            while (rs.goToNextRow()) {
+                list.push({
+                    id: rs.getLong(rs.getColumnIndex("ID")),
+                    merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+                    title: rs.getString(rs.getColumnIndex("PRODUCT_NAME")),
+                    price: rs.getDouble(rs.getColumnIndex("PRICE")),
+                    date: rs.getString(rs.getColumnIndex("CREATE_TIME")),
+                    imgUrl: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+                    status: rs.getLong(rs.getColumnIndex("STATUS"))
+                });
+            }
+            rs.close();
+            return list;
+        }
+        catch (err) {
+            return [];
+        }
+    }
+    // --- [æ–°å¢] è·å–å•†å®¶æ”¶åˆ°çš„è®¢å• ---
+    async getMerchantOrders(merchantId) {
+        if (!this.rdbStore)
+            return [];
+        try {
+            let predicates = new relationalStore.RdbPredicates("ORDERS");
+            predicates.equalTo("MERCHANT_ID", merchantId);
+            predicates.orderByDesc("ID");
+            let rs = await this.rdbStore.query(predicates);
+            let list = [];
+            while (rs.goToNextRow()) {
+                list.push({
+                    id: rs.getLong(rs.getColumnIndex("ID")),
+                    merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+                    title: rs.getString(rs.getColumnIndex("PRODUCT_NAME")),
+                    price: rs.getDouble(rs.getColumnIndex("PRICE")),
+                    date: rs.getString(rs.getColumnIndex("CREATE_TIME")),
+                    imgUrl: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+                    status: rs.getLong(rs.getColumnIndex("STATUS"))
+                });
+            }
+            rs.close();
+            return list;
+        }
+        catch (err) {
+            return [];
+        }
+    }
+    // --- [æ–°å¢] æ›´æ–°è®¢å•çŠ¶æ€ ---
+    async updateOrderStatus(orderId, newStatus) {
+        if (!this.rdbStore)
+            return false;
+        try {
+            const value = { STATUS: newStatus };
+            let predicates = new relationalStore.RdbPredicates("ORDERS");
+            predicates.equalTo("ID", orderId);
+            await this.rdbStore.update(value, predicates);
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    async getMerchantProducts(merchantId) {
+        if (!this.rdbStore)
+            return [];
+        try {
+            let predicates = new relationalStore.RdbPredicates("PRODUCT");
+            predicates.equalTo("MERCHANT_ID", merchantId);
+            predicates.orderByDesc("ID");
+            let rs = await this.rdbStore.query(predicates);
+            let list = [];
+            while (rs.goToNextRow())
+                list.push(this.rowToProduct(rs));
+            rs.close();
+            return list;
+        }
+        catch (err) {
+            return [];
+        }
+    }
+    async deleteProduct(productId) {
+        if (!this.rdbStore)
+            return false;
+        try {
+            let predicates = new relationalStore.RdbPredicates("PRODUCT");
+            predicates.equalTo("ID", productId);
+            await this.rdbStore.delete(predicates);
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    async updateProduct(productId, name, price, imgUrl, description = "") {
+        if (!this.rdbStore)
+            return false;
+        try {
+            const value = {
+                NAME: name,
+                PRICE: price,
+                IMAGE_URL: imgUrl,
+                DESCRIPTION: description
+            };
+            let predicates = new relationalStore.RdbPredicates("PRODUCT");
+            predicates.equalTo("ID", productId);
+            await this.rdbStore.update(value, predicates);
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    async updateUserAvatar(userId, avatarUri) {
+        if (!this.rdbStore)
+            return false;
+        try {
+            const value = { AVATAR: avatarUri };
+            let predicates = new relationalStore.RdbPredicates("USER");
+            predicates.equalTo("ID", userId);
+            await this.rdbStore.update(value, predicates);
+            return true;
+        }
+        catch (err) {
+            return false;
+        }
+    }
+    async addFavorite(userId, productId) {
+        if (!this.rdbStore)
+            return;
+        try {
+            const value = { USER_ID: userId, PRODUCT_ID: productId };
+            await this.rdbStore.insert("FAVORITE", value);
+        }
+        catch (e) { }
+    }
+    async getMyFavorites(userId) {
+        if (!this.rdbStore)
+            return [];
+        try {
+            let predicates = new relationalStore.RdbPredicates("FAVORITE");
+            predicates.equalTo("USER_ID", userId);
+            let rs = await this.rdbStore.query(predicates);
+            let ids = [];
+            while (rs.goToNextRow())
+                ids.push(rs.getLong(rs.getColumnIndex("PRODUCT_ID")));
+            rs.close();
+            if (ids.length === 0)
+                return [];
+            let prodPredicates = new relationalStore.RdbPredicates("PRODUCT");
+            prodPredicates.in("ID", ids);
+            let prodRs = await this.rdbStore.query(prodPredicates);
+            let list = [];
+            while (prodRs.goToNextRow())
+                list.push(this.rowToProduct(prodRs));
+            prodRs.close();
+            return list;
+        }
+        catch (err) {
+            return [];
+        }
+    }
+    async searchProducts(keyword) {
+        if (!this.rdbStore)
+            return [];
+        try {
+            let predicates = new relationalStore.RdbPredicates("PRODUCT");
+            predicates.contains("NAME", keyword);
+            predicates.orderByDesc("ID");
+            let rs = await this.rdbStore.query(predicates);
+            let list = [];
+            while (rs.goToNextRow())
+                list.push(this.rowToProduct(rs));
+            rs.close();
+            return list;
+        }
+        catch (err) {
+            return [];
+        }
+    }
+    async addToCart(userId, productId, count = 1) {
+        if (!this.rdbStore)
+            return false;
+        try {
+            let predicates = new relationalStore.RdbPredicates("CART");
+            predicates.equalTo("USER_ID", userId).equalTo("PRODUCT_ID", productId);
+            let rs = await this.rdbStore.query(predicates);
+            if (rs.goToFirstRow()) {
+                let currentCount = rs.getLong(rs.getColumnIndex("COUNT"));
+                let value = { COUNT: currentCount + count };
+                await this.rdbStore.update(value, predicates);
+            }
+            else {
+                let value = { USER_ID: userId, PRODUCT_ID: productId, COUNT: count };
+                await this.rdbStore.insert("CART", value);
+            }
+            rs.close();
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    async getCartList(userId) {
+        if (!this.rdbStore)
+            return [];
+        try {
+            let predicates = new relationalStore.RdbPredicates("CART");
+            predicates.equalTo("USER_ID", userId);
+            let rs = await this.rdbStore.query(predicates);
+            let cartItems = [];
+            while (rs.goToNextRow()) {
+                cartItems.push({
+                    cartId: rs.getLong(rs.getColumnIndex("ID")),
+                    productId: rs.getLong(rs.getColumnIndex("PRODUCT_ID")),
+                    count: rs.getLong(rs.getColumnIndex("COUNT"))
+                });
+            }
+            rs.close();
+            let resultList = [];
+            for (let item of cartItems) {
+                let prodPred = new relationalStore.RdbPredicates("PRODUCT");
+                prodPred.equalTo("ID", item.productId);
+                let prodRs = await this.rdbStore.query(prodPred);
+                if (prodRs.goToFirstRow()) {
+                    let product = this.rowToProduct(prodRs);
+                    let cartItem = new CartItem(product, item.cartId, item.count);
+                    resultList.push(cartItem);
+                }
+                prodRs.close();
+            }
+            return resultList;
+        }
+        catch (e) {
+            return [];
+        }
+    }
+    async deleteCartItem(cartId) {
+        if (!this.rdbStore)
+            return false;
+        try {
+            let predicates = new relationalStore.RdbPredicates("CART");
+            predicates.equalTo("ID", cartId);
+            await this.rdbStore.delete(predicates);
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    async hasCartItem(userId, productId) {
+        if (!this.rdbStore)
+            return false;
+        try {
+            let predicates = new relationalStore.RdbPredicates("CART");
+            predicates.equalTo("USER_ID", userId).equalTo("PRODUCT_ID", productId);
+            let rs = await this.rdbStore.query(predicates);
+            let count = rs.rowCount;
+            rs.close();
+            return count > 0;
+        }
+        catch (e) {
+            return false;
+        }
+    }
+}
+export default RdbUtil.getInstance();
+//# sourceMappingURL=RdbUtil.js.mapÂ“Ù_ hvigor_ignore_D:_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.data.relationalStore.d.tsÙMD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\ProductItem.etsÙFD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\User.etsÙLD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\common\utils\RdbUtil.etsÔrBœªmoduleName±isLocalDependency¯isNodeEntryFile§pkgPath±belongProjectPath§pkgNameªpkgVersion±dependencyPkgInfo¯hostModulesInfo°belongModulePath§checker¬shouldEmitJs¥entryÃÂÙ&D:\Dev_studio_Projicts\WaterFlow\entryÙ D:\Dev_studio_Projicts\WaterFlow¥entry¥1.0.0Ô  ›ÔrC’²hostDependencyName®hostModuleName·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryC·../common/utils/RdbUtil¥entryÙ&D:\Dev_studio_Projicts\WaterFlow\entryÔrDÜ ®¬getNodeCount²getIdentifierCount®getSymbolCount¬getTypeCountµgetInstantiationCountµgetRelationCacheSizes±isUndefinedSymbol±isArgumentsSymbol¯isUnknownSymbol¯getMergedSymbol®getDiagnostics´getGlobalDiagnostics´getRecursionIdentity¶getUnmatchedProperties¹getTypeOfSymbolAtLocation¯getTypeOfSymbolÙ(getSymbolsOfParameterPropertyDeclaration·getDeclaredTypeOfSymbol³getPropertiesOfType±getPropertyOfTypeÙ"getPrivateIdentifierPropertyOfType·getTypeOfPropertyOfType²getIndexInfoOfType³getIndexInfosOfTypeºgetIndexInfosOfIndexSymbol³getSignaturesOfType²getIndexTypeOfType¬getIndexType¬getBaseTypes¸getBaseTypeOfLiteralType®getWidenedType³getTypeFromTypeNode°getParameterTypeÙ$getParameterIdentifierNameAtPosition¸getPromisedTypeOfPromise®getAwaitedType¸getReturnTypeOfSignature®isNullableType¯getNullableType²getNonNullableType²getNonOptionalType°getTypeArguments®typeToTypeNodeÙ$indexInfoToIndexSignatureDeclaration¿signatureToSignatureDeclaration²symbolToEntityName²symbolToExpression¬symbolToNodeÙ!symbolToTypeParameterDeclarations¼symbolToParameterDeclarationºtypeParameterToDeclaration±getSymbolsInScope³getSymbolAtLocation·getIndexInfosAtLocationÙ!getShorthandAssignmentValueSymbolÙ#getExportSpecifierLocalTargetSymbol·getExportSymbolOfSymbol±getTypeAtLocationºgetTypeAtLocationForLinterÙ tryGetTypeAtLocationWithoutCheckºgetTypeOfAssignmentPatternÙ*getPropertySymbolOfDestructuringAssignment±signatureToString¬typeToString®symbolToStringµtypePredicateToString®writeSignature©writeType«writeSymbol²writeTypePredicate¼getAugmentedPropertiesOfType®getRootSymbols²getSymbolOfExpando±getContextualTypeÙ(getContextualTypeForObjectLiteralElementÙ#getContextualTypeForArgumentAtIndexÙ getContextualTypeForJsxAttribute²isContextSensitiveÙ!getTypeOfPropertyOfContextualTypeµgetFullyQualifiedNameÙ#tryGetResolvedSignatureWithoutCheck´getResolvedSignatureÙ/getResolvedSignatureForStringLiteralCompletionsÙ$getResolvedSignatureForSignatureHelpµgetExpandedParameters¹hasEffectiveRestParameterºcontainsArgumentsReference°getConstantValueµisValidPropertyAccessÙ#isValidPropertyAccessForCompletions»getSignatureFromDeclarationºisImplementationOfOverload¹getImmediateAliasedSymbol°getAliasedSymbol¯getEmitResolver²getExportsOfModule¿getExportsAndPropertiesOfModuleÙ forEachExportAndPropertyOfModule¯getSymbolWalker±getAmbientModules¹getJsxIntrinsicTagNamesAt³isOptionalParameter»tryGetMemberInModuleExportsÙ(tryGetMemberInModuleExportsAndProperties´tryFindAmbientModuleÙ(tryFindAmbientModuleWithoutAugmentations¯getApparentType¬getUnionType²isTypeAssignableTo³createAnonymousType¯createSignature¬createSymbol¯createIndexInfoªgetAnyType­getStringType­getNumberType±createPromiseType¯createArrayType¹getElementTypeOfArrayType®getBooleanType¬getFalseType«getTrueType«getVoidType°getUndefinedType«getNullType¯getESSymbolType¬getNeverType¯getOptionalType®getPromiseType²getPromiseLikeType´getAsyncIterableType²isSymbolAccessible«isArrayType«isTupleType¯isArrayLikeTypeÙ#isTypeInvalidDueToUnionDiscriminantºgetExactOptionalProperties¿getAllPossiblePropertiesOfTypesÙ(getSuggestedSymbolForNonexistentPropertyÙ#getSuggestionForNonexistentPropertyÙ,getSuggestedSymbolForNonexistentJSXAttributeÙ&getSuggestedSymbolForNonexistentSymbolÙ!getSuggestionForNonexistentSymbolÙ&getSuggestedSymbolForNonexistentModuleÙ!getSuggestionForNonexistentExportÙ+getSuggestedSymbolForNonexistentClassMember·getBaseConstraintOfType»getDefaultFromTypeParameter«resolveName¯getJsxNamespaceµgetJsxFragmentFactory¸getAccessibleSymbolChain»getTypePredicateOfSignature¹resolveExternalModuleName»resolveExternalModuleSymbol°tryGetThisTypeAt¹getTypeArgumentConstraint¸getSuggestionDiagnostics¸runWithCancellationTokenÙ3getLocalTypeParametersOfClassOrInterfaceOrTypeAlias´isDeclarationVisible´isPropertyAccessible»getTypeOnlyAliasDeclaration¿getMemberOverrideModifierStatusÙ!isTypeParameterPossiblyReferenced²getConstEnumRelate´clearConstEnumRelateµdeleteConstEnumRelateÙ$getTypeArgumentsForResolvedSignatureµgetCheckedSourceFilesÙ"collectHaveTsNoCheckFilesForLinter·clearQualifiedNameCache®isStaticRecord²isStaticSourceFileÔ  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  ÃÃÚHimport relationalStore from '@ohos.data.relationalStore';
+import common from '@ohos.app.ability.common';
+import ProductItem from '../../viewmodel/ProductItem';
+import { User } from '../../viewmodel/User';
+
+// [ä¿®æ”¹] è®¢å•æ¥å£å®šä¹‰ï¼Œå¢åŠ  ID, å•†å®¶ID, çŠ¶æ€
+export interface OrderItem {
+  id: number;           // è®¢å•ä¸»é”®
+  merchantId: number;   // å•†å®¶ID
+  title: string;
+  price: number;
+  date: string;
+  imgUrl: string;
+  status: number;       // 0:å¾…å‘è´§, 1:å·²å‘è´§, 2:å·²å®Œæˆ
+}
+
+// è´­ç‰©è½¦åŸå§‹è®°å½•æ¥å£
+interface CartRecord {
+  cartId: number;
+  productId: number;
+  count: number;
+}
+
+// è´­ç‰©è½¦å•†å“ç±»
+export class CartItem extends ProductItem {
+  cartId: number;
+  count: number;
+
+  constructor(product: ProductItem, cartId: number, count: number) {
+    super(product);
+    this.cartId = cartId;
+    this.count = count;
+  }
+}
+
+class RdbUtil {
+  private rdbStore: relationalStore.RdbStore | null = null;
+  private static instance: RdbUtil;
+
+  private readonly STORE_CONFIG: relationalStore.StoreConfig = {
+    name: 'Mall.db',
+    securityLevel: relationalStore.SecurityLevel.S1
+  };
+
+  public static getInstance(): RdbUtil {
+    if (!RdbUtil.instance) { RdbUtil.instance = new RdbUtil(); }
+    return RdbUtil.instance;
+  }
+
+  // --- åˆå§‹åŒ–æ•°æ®åº“ (å»ºè¡¨) ---
+  async initDB(context: common.UIAbilityContext) {
+    if (this.rdbStore) return;
+    try {
+      this.rdbStore = await relationalStore.getRdbStore(context, this.STORE_CONFIG);
+
+      // 1. ç”¨æˆ·è¡¨
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS USER (ID INTEGER PRIMARY KEY AUTOINCREMENT, USERNAME TEXT, PASSWORD TEXT, ROLE INTEGER, BALANCE REAL, AVATAR TEXT)`);
+
+      // 2. å•†å“è¡¨
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS PRODUCT (ID INTEGER PRIMARY KEY AUTOINCREMENT, MERCHANT_ID INTEGER, NAME TEXT, PRICE REAL, IMAGE_URL TEXT, WIDTH INTEGER, HEIGHT INTEGER, DESCRIPTION TEXT, CATEGORY TEXT)`);
+
+      // 3. æ”¶è—è¡¨
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS FAVORITE (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_ID INTEGER, UNIQUE(USER_ID, PRODUCT_ID))`);
+
+      // 4. [ä¿®æ”¹] è®¢å•è¡¨ - å¢åŠ  MERCHANT_ID å’Œ STATUS å­—æ®µ
+      // æ³¨æ„ï¼šå¦‚æœå·²å®‰è£…åº”ç”¨ï¼Œéœ€ç‚¹å‡»"æˆ‘çš„-é‡ç½®æ‰€æœ‰æ•°æ®"è§¦å‘é‡å»ºï¼Œæˆ–å¸è½½é‡è£…
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS ORDERS (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, MERCHANT_ID INTEGER, PRODUCT_NAME TEXT, PRICE REAL, CREATE_TIME TEXT, IMAGE_URL TEXT, STATUS INTEGER)`);
+
+      // 5. è´­ç‰©è½¦è¡¨
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS CART (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_ID INTEGER, COUNT INTEGER)`);
+
+    } catch (err) {
+      console.error(`RdbUtil initDB failed: ${JSON.stringify(err)}`);
+    }
+  }
+
+  // --- å½»åº•æ¸…ç©ºæ•°æ®åº“ (é‡ç½®ç”¨) ---
+  async resetDatabase() {
+    if (!this.rdbStore) return;
+    try {
+      await this.rdbStore.executeSql('DELETE FROM USER');
+      await this.rdbStore.executeSql('DELETE FROM PRODUCT');
+      await this.rdbStore.executeSql('DELETE FROM FAVORITE');
+      await this.rdbStore.executeSql('DELETE FROM ORDERS');
+      await this.rdbStore.executeSql('DELETE FROM CART');
+      await this.rdbStore.executeSql("DELETE FROM sqlite_sequence WHERE name IN ('USER','PRODUCT','FAVORITE','ORDERS','CART')");
+    } catch (e) {
+      console.error("Reset DB failed", JSON.stringify(e));
+    }
+  }
+
+  async isProductEmpty(): Promise<boolean> {
+    if (!this.rdbStore) return true;
+    try {
+      let rs = await this.rdbStore.query(new relationalStore.RdbPredicates("PRODUCT"));
+      let count = rs.rowCount;
+      rs.close();
+      return count === 0;
+    } catch (e) { return true; }
+  }
+
+  async login(username: string, password: string): Promise<User | null> {
+    if (!this.rdbStore) return null;
+    try {
+      let predicates = new relationalStore.RdbPredicates("USER");
+      predicates.equalTo("USERNAME", username).equalTo("PASSWORD", password);
+      let rs = await this.rdbStore.query(predicates);
+
+      if (rs.goToFirstRow()) {
+        let avatar = "";
+        try { avatar = rs.getString(rs.getColumnIndex("AVATAR")); } catch(e) {}
+
+        let user = new User(
+          rs.getLong(rs.getColumnIndex("ID")),
+          rs.getString(rs.getColumnIndex("USERNAME")),
+          rs.getLong(rs.getColumnIndex("ROLE")),
+          rs.getDouble(rs.getColumnIndex("BALANCE")),
+          ""
+        );
+        user.token = avatar;
+        rs.close();
+        return user;
+      }
+      rs.close();
+      return null;
+    } catch (err) { return null; }
+  }
+
+  async register(username: string, password: string, role: number): Promise<User | null> {
+    if (!this.rdbStore) return null;
+    try {
+      let predicates = new relationalStore.RdbPredicates("USER");
+      predicates.equalTo("USERNAME", username);
+      let rs = await this.rdbStore.query(predicates);
+      if (rs.rowCount > 0) { rs.close(); return null; }
+      rs.close();
+
+      let balance = role === 1 ? 0 : 50000;
+      const value: relationalStore.ValuesBucket = {
+        USERNAME: username, PASSWORD: password, ROLE: role, BALANCE: balance, AVATAR: ""
+      };
+      let rowId = await this.rdbStore.insert("USER", value);
+      return new User(rowId, username, role, balance, "");
+    } catch (err) { return null; }
+  }
+
+  async addProduct(merchantId: number, name: string, price: number, imgUrl: string, width: number = 300, height: number = 300, description: string = "", category: string = "ç”µå­ç‰©å“") {
+    if (!this.rdbStore) return;
+    try {
+      const value: relationalStore.ValuesBucket = {
+        MERCHANT_ID: merchantId,
+        NAME: name,
+        PRICE: price,
+        IMAGE_URL: imgUrl,
+        WIDTH: width,
+        HEIGHT: height,
+        DESCRIPTION: description,
+        CATEGORY: category
+      };
+      await this.rdbStore.insert("PRODUCT", value);
+    } catch (err) { console.error(`Add product failed: ${JSON.stringify(err)}`); }
+  }
+
+  private rowToProduct(rs: relationalStore.ResultSet): ProductItem {
+    let desc = "";
+    let cat = "ç”µå­ç‰©å“";
+    try { desc = rs.getString(rs.getColumnIndex("DESCRIPTION")); } catch(e){}
+    try { cat = rs.getString(rs.getColumnIndex("CATEGORY")); } catch(e){}
+
+    return new ProductItem({
+      id: rs.getLong(rs.getColumnIndex("ID")),
+      merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+      name: rs.getString(rs.getColumnIndex("NAME")),
+      price: rs.getDouble(rs.getColumnIndex("PRICE")),
+      image_url: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+      width: rs.getLong(rs.getColumnIndex("WIDTH")),
+      height: rs.getLong(rs.getColumnIndex("HEIGHT")),
+      description: desc,
+      category: cat,
+      detailImages: []
+    });
+  }
+
+  async getAllProducts(): Promise<ProductItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("PRODUCT");
+      predicates.orderByDesc("ID");
+      let rs = await this.rdbStore.query(predicates);
+      let list: ProductItem[] = [];
+      while (rs.goToNextRow()) {
+        list.push(this.rowToProduct(rs));
+      }
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
+
+  async getProductsByCategory(category: string): Promise<ProductItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("PRODUCT");
+      if (category !== 'å…¨éƒ¨') {
+        predicates.equalTo("CATEGORY", category);
+      }
+      predicates.orderByDesc("ID");
+      let rs = await this.rdbStore.query(predicates);
+      let list: ProductItem[] = [];
+      while (rs.goToNextRow()) {
+        list.push(this.rowToProduct(rs));
+      }
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
+
+  // --- [ä¿®æ”¹] åˆ›å»ºè®¢å• ---
+  // å¢åŠ  merchantId å‚æ•°, åˆå§‹åŒ– status ä¸º 0 (å¾…å‘è´§)
+  async createOrder(userId: number, productName: string, price: number, imgUrl: string, merchantId: number): Promise<number> {
+    if (!this.rdbStore) return -2;
+
+    try {
+      this.rdbStore.beginTransaction();
+
+      let predicates = new relationalStore.RdbPredicates("USER");
+      predicates.equalTo("ID", userId);
+      let rs = await this.rdbStore.query(predicates);
+
+      if (!rs.goToFirstRow()) {
+        rs.close();
+        this.rdbStore.rollBack();
+        return -2;
+      }
+
+      let currentBalance = rs.getDouble(rs.getColumnIndex("BALANCE"));
+      rs.close();
+
+      if (currentBalance < price) {
+        this.rdbStore.rollBack();
+        return -1;
+      }
+
+      // 1. æ‰£é™¤ä¹°å®¶ä½™é¢
+      const userVal: relationalStore.ValuesBucket = { BALANCE: currentBalance - price };
+      await this.rdbStore.update(userVal, predicates);
+
+      // 2. åˆ›å»ºè®¢å•è®°å½•
+      const orderVal: relationalStore.ValuesBucket = {
+        USER_ID: userId,
+        MERCHANT_ID: merchantId,
+        PRODUCT_NAME: productName,
+        PRICE: price,
+        CREATE_TIME: new Date().toLocaleString(),
+        IMAGE_URL: imgUrl,
+        STATUS: 0 // é»˜è®¤å¾…å‘è´§
+      };
+      await this.rdbStore.insert("ORDERS", orderVal);
+
+      // (å¯é€‰) å¢åŠ å•†å®¶ä½™é¢é€»è¾‘æš‚çœç•¥ï¼Œä¸“æ³¨äºè®¢å•çŠ¶æ€æµè½¬
+
+      this.rdbStore.commit();
+      return 1;
+
+    } catch (err) {
+      this.rdbStore.rollBack();
+      return -2;
+    }
+  }
+
+  // --- [ä¿®æ”¹] è·å–ä¹°å®¶è®¢å• ---
+  async getMyOrders(userId: number): Promise<OrderItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("ORDERS");
+      predicates.equalTo("USER_ID", userId);
+      predicates.orderByDesc("ID"); // æœ€æ–°è®¢å•åœ¨å‰
+      let rs = await this.rdbStore.query(predicates);
+      let list: OrderItem[] = [];
+      while (rs.goToNextRow()) {
+        list.push({
+          id: rs.getLong(rs.getColumnIndex("ID")),
+          merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+          title: rs.getString(rs.getColumnIndex("PRODUCT_NAME")),
+          price: rs.getDouble(rs.getColumnIndex("PRICE")),
+          date: rs.getString(rs.getColumnIndex("CREATE_TIME")),
+          imgUrl: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+          status: rs.getLong(rs.getColumnIndex("STATUS"))
+        });
+      }
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
+
+  // --- [æ–°å¢] è·å–å•†å®¶æ”¶åˆ°çš„è®¢å• ---
+  async getMerchantOrders(merchantId: number): Promise<OrderItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("ORDERS");
+      predicates.equalTo("MERCHANT_ID", merchantId);
+      predicates.orderByDesc("ID");
+      let rs = await this.rdbStore.query(predicates);
+      let list: OrderItem[] = [];
+      while (rs.goToNextRow()) {
+        list.push({
+          id: rs.getLong(rs.getColumnIndex("ID")),
+          merchantId: rs.getLong(rs.getColumnIndex("MERCHANT_ID")),
+          title: rs.getString(rs.getColumnIndex("PRODUCT_NAME")),
+          price: rs.getDouble(rs.getColumnIndex("PRICE")),
+          date: rs.getString(rs.getColumnIndex("CREATE_TIME")),
+          imgUrl: rs.getString(rs.getColumnIndex("IMAGE_URL")),
+          status: rs.getLong(rs.getColumnIndex("STATUS"))
+        });
+      }
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
+
+  // --- [æ–°å¢] æ›´æ–°è®¢å•çŠ¶æ€ ---
+  async updateOrderStatus(orderId: number, newStatus: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      const value: relationalStore.ValuesBucket = { STATUS: newStatus };
+      let predicates = new relationalStore.RdbPredicates("ORDERS");
+      predicates.equalTo("ID", orderId);
+      await this.rdbStore.update(value, predicates);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  async getMerchantProducts(merchantId: number): Promise<ProductItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("PRODUCT");
+      predicates.equalTo("MERCHANT_ID", merchantId);
+      predicates.orderByDesc("ID");
+      let rs = await this.rdbStore.query(predicates);
+      let list: ProductItem[] = [];
+      while (rs.goToNextRow()) list.push(this.rowToProduct(rs));
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
+
+  async deleteProduct(productId: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      let predicates = new relationalStore.RdbPredicates("PRODUCT");
+      predicates.equalTo("ID", productId);
+      await this.rdbStore.delete(predicates);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  async updateProduct(productId: number, name: string, price: number, imgUrl: string, description: string = ""): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      const value: relationalStore.ValuesBucket = {
+        NAME: name,
+        PRICE: price,
+        IMAGE_URL: imgUrl,
+        DESCRIPTION: description
+      };
+      let predicates = new relationalStore.RdbPredicates("PRODUCT");
+      predicates.equalTo("ID", productId);
+      await this.rdbStore.update(value, predicates);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  async updateUserAvatar(userId: number, avatarUri: string): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      const value: relationalStore.ValuesBucket = { AVATAR: avatarUri };
+      let predicates = new relationalStore.RdbPredicates("USER");
+      predicates.equalTo("ID", userId);
+      await this.rdbStore.update(value, predicates);
+      return true;
+    } catch (err) { return false; }
+  }
+
+  async addFavorite(userId: number, productId: number) {
+    if (!this.rdbStore) return;
+    try {
+      const value: relationalStore.ValuesBucket = { USER_ID: userId, PRODUCT_ID: productId };
+      await this.rdbStore.insert("FAVORITE", value);
+    } catch (e) { }
+  }
+
+  async getMyFavorites(userId: number): Promise<ProductItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("FAVORITE");
+      predicates.equalTo("USER_ID", userId);
+      let rs = await this.rdbStore.query(predicates);
+      let ids: number[] = [];
+      while (rs.goToNextRow()) ids.push(rs.getLong(rs.getColumnIndex("PRODUCT_ID")));
+      rs.close();
+      if (ids.length === 0) return [];
+
+      let prodPredicates = new relationalStore.RdbPredicates("PRODUCT");
+      prodPredicates.in("ID", ids);
+      let prodRs = await this.rdbStore.query(prodPredicates);
+      let list: ProductItem[] = [];
+      while (prodRs.goToNextRow()) list.push(this.rowToProduct(prodRs));
+      prodRs.close();
+      return list;
+    } catch (err) { return []; }
+  }
+
+  async searchProducts(keyword: string): Promise<ProductItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("PRODUCT");
+      predicates.contains("NAME", keyword);
+      predicates.orderByDesc("ID");
+      let rs = await this.rdbStore.query(predicates);
+      let list: ProductItem[] = [];
+      while (rs.goToNextRow()) list.push(this.rowToProduct(rs));
+      rs.close();
+      return list;
+    } catch (err) { return []; }
+  }
+
+  async addToCart(userId: number, productId: number, count: number = 1): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      let predicates = new relationalStore.RdbPredicates("CART");
+      predicates.equalTo("USER_ID", userId).equalTo("PRODUCT_ID", productId);
+      let rs = await this.rdbStore.query(predicates);
+
+      if (rs.goToFirstRow()) {
+        let currentCount = rs.getLong(rs.getColumnIndex("COUNT"));
+        let value: relationalStore.ValuesBucket = { COUNT: currentCount + count };
+        await this.rdbStore.update(value, predicates);
+      } else {
+        let value: relationalStore.ValuesBucket = { USER_ID: userId, PRODUCT_ID: productId, COUNT: count };
+        await this.rdbStore.insert("CART", value);
+      }
+      rs.close();
+      return true;
+    } catch (e) { return false; }
+  }
+
+  async getCartList(userId: number): Promise<CartItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("CART");
+      predicates.equalTo("USER_ID", userId);
+      let rs = await this.rdbStore.query(predicates);
+
+      let cartItems: CartRecord[] = [];
+      while(rs.goToNextRow()) {
+        cartItems.push({
+          cartId: rs.getLong(rs.getColumnIndex("ID")),
+          productId: rs.getLong(rs.getColumnIndex("PRODUCT_ID")),
+          count: rs.getLong(rs.getColumnIndex("COUNT"))
+        });
+      }
+      rs.close();
+
+      let resultList: CartItem[] = [];
+      for (let item of cartItems) {
+        let prodPred = new relationalStore.RdbPredicates("PRODUCT");
+        prodPred.equalTo("ID", item.productId);
+        let prodRs = await this.rdbStore.query(prodPred);
+        if (prodRs.goToFirstRow()) {
+          let product: ProductItem = this.rowToProduct(prodRs);
+          let cartItem = new CartItem(product, item.cartId, item.count);
+          resultList.push(cartItem);
+        }
+        prodRs.close();
+      }
+      return resultList;
+    } catch (e) { return []; }
+  }
+
+  async deleteCartItem(cartId: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      let predicates = new relationalStore.RdbPredicates("CART");
+      predicates.equalTo("ID", cartId);
+      await this.rdbStore.delete(predicates);
+      return true;
+    } catch(e) { return false; }
+  }
+
+  async hasCartItem(userId: number, productId: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      let predicates = new relationalStore.RdbPredicates("CART");
+      predicates.equalTo("USER_ID", userId).equalTo("PRODUCT_ID", productId);
+      let rs = await this.rdbStore.query(predicates);
+      let count = rs.rowCount;
+      rs.close();
+      return count > 0;
+    } catch (e) { return false; }
+  }
+}
+export default RdbUtil.getInstance();ÀÔrE“º@ohos.data.relationalStore»../../viewmodel/ProductItem´../../viewmodel/UserÔrF—ªassertions¨external¢id¤meta±moduleSideEffectsªresolvedByµsyntheticNamedExportsAÃÙ_ hvigor_ignore_D:_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.data.relationalStore.d.tsÔrG‘¯hostModulesInfo‘Cº@ohos.data.relationalStore¥entryÃªoh-resolveÂFAÂÙMD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\ProductItem.etsAÃªoh-resolveÂFAÂÙFD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\User.etsAÃªoh-resolveÂ“ÔrH–§version¤fileªsourceRoot§sources¥names¨mappingsªRdbUtil.js ‘«RdbUtil.etsÜ–”    ”  ”  ”  ”8  8”9  9–”   ” ” ” ”5 5”6 6˜”   ” ”	 	” ” ” ”+ +”, ,’”   ”	 	–”   ” ” ” ” ”) )—” ” ” "” $” 2”! 4”& ÌA–” ” 	” 
+” ” ” —” ” ” 	” ” ” ” —” ” ” 	” ” ” ” ’”  ”  ‘” !“”  # ” #” #‘” # •” $
+” $” $6” $:” $;“” '” '” '?”” (” (” (
+” (˜” )” )” )”* )"”+ )#”8 )0”9 )1”; )3’”	 *”
+ *’” Íó ” Íó”” ,	”
+ ,” ,” ,—” -” -” -	” -” -” -” -™” -” -$” -%” --” -0”# -4”* -;”, -=”- ->‘”	 -Ì@–” .” .” .” .” .”  .’” /” /’” 1” 1–” 2”	 2”
+ 2” 2” 2” 2/•” 3” 3” 3” 3” 3’” 3” 3’” 4” 4Ü ” 5” 5
+” 5” 5” 5”" 5”1 5+”2 5,”= 57”> 58”ÌE 5?”ÌG 5ÌA”ÌK 5ÌE”ÌL 5ÌF”ÌX 5ÌR”ÌY 5ÌS”ÌZ 5ÌT’” 7” 7›” 8” 8” 8” 8” 8”  8”* 8$”+ 8%”Ìº 8Ì´”Ì» 8Ìµ”Ì¼ 8Ì¶’” :” :›” ;” ;” ;” ;” ;”  ;”* ;$”+ ;%”Ìò ;Ìì”Ìó ;Ìí”Ìô ;Ìî’” =” =›” >” >” >” >” >”  >”* >$”+ >%”Ì¹ >Ì³”Ìº >Ì´”Ì» >Ìµ’” Ì@”7 Ì@1’” ÌA”2 ÌA,›” ÌB” ÌB” ÌB” ÌB” ÌB”  ÌB”* ÌB$”+ ÌB%”Ìì ÌBÌæ”Ìí ÌBÌç”Ìî ÌBÌè’” ÌD” ÌD›” ÌE” ÌE” ÌE” ÌE” ÌE”  ÌE”* ÌE$”+ ÌE%”Ì§ ÌEÌ¡”Ì¨ ÌEÌ¢”Ì© ÌEÌ£‘”	 ÌG”” ÌG” ÌG” ÌG” ÌGŸ” ÌH” ÌH” ÌH” ÌH” ÌH”4 ÌH.”8 ÌH2”9 ÌH3”ÌB ÌH<”ÌC ÌH=”ÌF ÌHÌ@”ÌG ÌHÌA”ÌI ÌHÌC”ÌJ ÌHÌD”ÌK ÌHÌE‘”	 ÌI’” ÌJ” ÌJ’” ÌL” ÌL”” ÌM”	 ÌM”
+ ÌM” ÌM–” ÌN” ÌN” ÌN	” ÌN” ÌN” ÌN’” ÌN” ÌN’” ÌO” ÌO›” ÌP” ÌP” ÌP” ÌP” ÌP”  ÌP”* ÌP$”+ ÌP%”= ÌP7”> ÌP8”? ÌP9›” ÌQ” ÌQ” ÌQ” ÌQ” ÌQ”  ÌQ”* ÌQ$”+ ÌQ%”Ì@ ÌQ:”ÌA ÌQ;”ÌB ÌQ<›” ÌR” ÌR” ÌR” ÌR” ÌR”  ÌR”* ÌR$”+ ÌR%”ÌA ÌR;”ÌB ÌR<”ÌC ÌR=›” ÌS” ÌS” ÌS” ÌS” ÌS”  ÌS”* ÌS$”+ ÌS%”? ÌS9”Ì@ ÌS:”ÌA ÌS;›” ÌT” ÌT” ÌT” ÌT” ÌT”  ÌT”* ÌT$”+ ÌT%”= ÌT7”> ÌT8”? ÌT9›” ÌU” ÌU” ÌU” ÌU” ÌU”  ÌU”* ÌU$”+ ÌU%”Ì„ ÌUÌ~”Ì… ÌUÌ”Ì† ÌUÌ€‘”	 ÌV”” ÌV” ÌV” ÌV” ÌVŸ” ÌW” ÌW” ÌW” ÌW” ÌW”+ ÌW%”- ÌW'”1 ÌW+”2 ÌW,”; ÌW5”< ÌW6”= ÌW7”> ÌW8”? ÌW9”Ì@ ÌW:‘”	 ÌX’” ÌY” ÌY”” Ì[”	 Ì[”
+ Ì[” Ì[–” Ì\” Ì\” Ì\	” Ì\” Ì\” Ì\”” Ì\” Ì\” Ì\#” Ì\$’” Ì]” Ì]Ü ” Ì^” Ì^
+” Ì^” Ì^” Ì^” Ì^”  Ì^”( Ì^"”) Ì^#”. Ì^(”/ Ì^)”3 Ì^-”ÌB Ì^<”ÌC Ì^=”ÌP Ì^ÌJ”ÌQ Ì^ÌK”ÌZ Ì^ÌT”Ì[ Ì^ÌU”Ì\ Ì^ÌV”Ì] Ì^ÌW˜” Ì_” Ì_
+” Ì_” Ì_” Ì_” Ì_”# Ì_”$ Ì_–” Ì`” Ì`” Ì`	” Ì`” Ì`” Ì`–” Ìa” Ìa” Ìa” Ìa” Ìa” Ìa‘”	 Ìb”” Ìb” Ìb” Ìb” Ìb”” Ìb” Ìb” Ìb” Ìb‘”	 Ìb ’” Ìc” Ìc˜” Ìe”	 Ìe”
+ Ìe” Ìe” Ìe” Ìe” Ìe ”" Ìe0–” Ìf” Ìf” Ìf	” Ìf” Ìf” Ìf”” Ìf” Ìf” Ìf#” Ìf$’” Ìg” Ìgœ” Ìh” Ìh
+” Ìh” Ìh”! Ìh”0 Ìh*”1 Ìh+”> Ìh8”? Ìh9”ÌE Ìh?”ÌF ÌhÌ@”ÌG ÌhÌAÜ ” Ìi” Ìi” Ìi” Ìi” Ìi”) Ìi#”+ Ìi%”3 Ìi-”4 Ìi.”5 Ìi/”< Ìi6”= Ìi7”ÌG ÌiÌA”ÌI ÌiÌC”ÌQ ÌiÌK”ÌR ÌiÌL”ÌS ÌiÌM” Ìj” Ìj
+” Ìj” Ìj” Ìj” Ìj”  Ìj”( Ìj"”) Ìj#”. Ìj(”/ Ìj)”9 Ìj3”: Ìj4”; Ìj5—” Ìl” Ìl
+” Ìl” Ìl” Ìl”! Ìl”# Ìl–” Ìm” Ìm” Ìm” Ìm” Ìm”  Ìm’” Ìn” ÌnŸ” Ìn” Ìn” Ìn” Ìn”  Ìn”) Ìn#”* Ìn$”, Ìn&”- Ìn'”; Ìn5”< Ìn6”ÌD Ìn>”ÌE Ìn?”ÌF ÌnÌ@”ÌG ÌnÌA‘” ÌnÌC•” ÌnÌD” ÌnÌJ” ÌnÌK” ÌnÌM” ÌnÌOÜ :” Ìp” Ìp” Ìp” Ìp” Ìp”# Ìp”$ Ìq
+”& Ìq”' Ìq”. Ìq”/ Ìq”1 Ìq”2 Ìq”Ì@ Ìq&”ÌA Ìq'”ÌE Ìq+”ÌF Ìq,”ÌG Ìq-”ÌI Ìr
+”ÌK Ìr”ÌL Ìr”ÌU Ìr”ÌV Ìr”ÌX Ìr”ÌY Ìr”Ìg Ìr(”Ìh Ìr)”Ìr Ìr3”Ìs Ìr4”Ìt Ìr5”Ìv Ìs
+”Ìx Ìs”Ìy Ìs”Ì€ Ìs”Ì Ìs”Ìƒ Ìs”Ì„ Ìs”Ì’ Ìs&”Ì“ Ìs'”Ì™ Ìs-”Ìš Ìs.”Ì› Ìs/”Ì Ìt
+”ÌŸ Ìt”Ì  Ìt”Ì© Ìt”Ìª Ìt”Ì¬ Ìt”Ì­ Ìt”Ì» Ìt(”Ì¼ Ìt)”ÌÅ Ìt2”ÌÆ Ìt3”ÌÇ Ìt4”ÌÉ Ìu
+”ÌË Ìu”ÌÌ Ìv	”ÌÍ Ìv
+—” Ìw” Ìw” Ìw” Ìw” Ìw”# Ìw”$ Ìw–” Ìx” Ìx
+” Ìx” Ìx” Ìx” Ìx”” Ìy” Ìy” Ìy” Ìy‘” Ìz–” Ì{” Ì{” Ì{	” Ì{” Ì{” Ì{”” Ì|” Ì|” Ì|” Ì|‘”	 Ì}”” Ì}” Ì}” Ì}” Ì}”” Ì}” Ì}” Ì}” Ì} ‘”	 Ì}"’” Ì~” Ì~š” Ì€”	 Ì€”
+ Ì€” Ì€” Ì€” Ì€!” Ì€#”% Ì€3”' Ì€5”+ Ì€ÌA–” Ì” Ì” Ì	” Ì” Ì” Ì”” Ì” Ì” Ì#” Ì$’” Ì‚” Ì‚œ” Ìƒ” Ìƒ
+” Ìƒ” Ìƒ”! Ìƒ”0 Ìƒ*”1 Ìƒ+”> Ìƒ8”? Ìƒ9”ÌE Ìƒ?”ÌF ÌƒÌ@”ÌG ÌƒÌAš” Ì„” Ì„” Ì„” Ì„” Ì„”) Ì„#”+ Ì„%”3 Ì„-”4 Ì„.”5 Ì„/” Ì…” Ì…
+” Ì…” Ì…” Ì…” Ì…”  Ì…”( Ì…"”) Ì…#”. Ì…(”/ Ì…)”9 Ì…3”: Ì…4”; Ì…5˜” Ì†” Ì†
+” Ì†” Ì†” Ì†” Ì†” Ì†”! Ì†–” Ì†” Ì†” Ì† ” Ì†%” Ì†'” Ì†(”” Ì†)” Ì†0” Ì†4” Ì†5‘” Ì†7–” Ì‡” Ì‡” Ì‡	” Ì‡” Ì‡” Ì‡Ü ” Ì‰” Ì‰
+” Ì‰” Ì‰” Ì‰”# Ì‰”$ Ì‰”% Ì‰”& Ì‰ ”' Ì‰!”( Ì‰"”) Ì‰#”* Ì‰$”+ Ì‰%”0 Ì‰*”1 Ì‰+”” ÌŠ” ÌŠ” ÌŠ” ÌŠ2Ü ” Ì‹” Ì‹” Ì‹”" Ì‹”$ Ì‹”, Ì‹$”. Ì‹&”6 Ì‹.”8 Ì‹0”< Ì‹4”> Ì‹6”ÌB Ì‹:”ÌD Ì‹<”ÌK Ì‹ÌC”ÌM Ì‹ÌE”ÌT Ì‹ÌL”ÌV Ì‹ÌN”Ì\ Ì‹ÌT”Ì^ Ì‹ÌV”Ì` Ì‹ÌX’” ÌŒ” ÌŒÜ ” Ì” Ì
+” Ì” Ì” Ì”" Ì”# Ì”+ Ì%”, Ì&”2 Ì,”3 Ì-”9 Ì3”; Ì5”Ì@ Ì:”ÌA Ì;”ÌB Ì<Ü ” Ì” Ì” Ì” Ì” Ì”! Ì”# Ì”+ Ì%”- Ì'”1 Ì+”3 Ì-”: Ì4”< Ì6”> Ì8”? Ì9”Ì@ Ì:‘”	 Ì”” Ì” Ì” Ì” Ì”” Ì” Ì” Ì” Ì ‘”	 Ì"’” Ì” ÌÜ ” Ì’”	 Ì’”
+ Ì’” Ì’” Ì’” Ì’%”! Ì’'”% Ì’3”' Ì’5”, Ì’ÌB”. Ì’ÌD”4 Ì’ÌR”6 Ì’ÌT”> Ì’Ìd”ÌA Ì’Ìg”ÌC Ì’Ìi”ÌL Ì’Ìz”ÌO Ì’Ì}”ÌQ Ì’Ì”Ì_ Ì’Ì•”Ìa Ì’Ì—”Ìc Ì’Ì™”Ìn Ì’Ì¬”Ìt Ì’Ì²–” Ì“” Ì“” Ì“	” Ì“” Ì“” Ì“’” Ì“” Ì“’” Ì”” Ì””” Ì•” Ì•” Ì•” Ì•2”” Ì–” Ì–” Ì–”' Ì–”” Ì—” Ì—” Ì—” Ì—”” Ì˜” Ì˜” Ì˜” Ì˜”” Ì™” Ì™” Ì™”! Ì™”” Ìš” Ìš” Ìš” Ìš”” Ì›” Ì›” Ì›” Ì›”” Ìœ” Ìœ” Ìœ”( Ìœ ”” Ì” Ì” Ì”" Ì’” Ì” Ì” ÌŸ” ÌŸ” ÌŸ” ÌŸ” ÌŸ”  ÌŸ”& ÌŸ ”' ÌŸ!”0 ÌŸ*”2 ÌŸ,”7 ÌŸ1”8 ÌŸ2”9 ÌŸ3‘”	 Ì ”” Ì ” Ì ” Ì ” Ì Ÿ” Ì ” Ì ” Ì ” Ì !” Ì "”1 Ì 9”5 Ì =”6 Ì >”? Ì ÌG”Ì@ Ì ÌH”ÌC Ì ÌK”ÌD Ì ÌL”ÌF Ì ÌN”ÌG Ì ÌO”ÌH Ì ÌP‘”	 Ì ÌR’” Ì¡” Ì¡”” Ì£
+” Ì£” Ì£” Ì£4–” Ì¤” Ì¤” Ì¤” Ì¤” Ì¤” Ì¤–” Ì¥” Ì¥” Ì¥” Ì¥” Ì¥” Ì¥’” Ì¦” Ì¦Ÿ” Ì¦
+” Ì¦” Ì¦” Ì¦” Ì¦” Ì¦”  Ì¦”" Ì¦ ”# Ì¦!”1 Ì¦/”2 Ì¦0”? Ì¦=”Ì@ Ì¦>”ÌA Ì¦?”ÌB Ì¦Ì@‘”	 Ì¦ÌB•” Ì¦ÌC” Ì¦ÌI” Ì¦ÌJ” Ì¦ÌK” Ì¦ÌM’” Ì§” Ì§Ÿ” Ì§
+” Ì§” Ì§” Ì§” Ì§” Ì§” Ì§”! Ì§”" Ì§ ”0 Ì§.”1 Ì§/”; Ì§9”< Ì§:”= Ì§;”> Ì§<‘”	 Ì§>•” Ì§?” Ì§ÌE” Ì§ÌF” Ì§ÌG” Ì§ÌI•” Ì©” Ì©” Ì©” Ì©” Ì©” Ìª” Ìª” Ìª
+” Ìª” Ìª” Ìª” Ìª” Ìª” Ìª”, Ìª&”- Ìª'”1 Ìª+”2 Ìª,”3 Ìª-” Ì«” Ì«” Ì«” Ì«” Ì«”" Ì«”# Ì«”% Ì«”& Ì« ”4 Ì«.”5 Ì«/”ÌB Ì«<”ÌC Ì«=”ÌD Ì«>” Ì¬” Ì¬
+” Ì¬” Ì¬” Ì¬” Ì¬” Ì¬”! Ì¬”" Ì¬”0 Ì¬*”1 Ì¬+”7 Ì¬1”8 Ì¬2”9 Ì¬3” Ì­” Ì­” Ì­” Ì­” Ì­” Ì­”  Ì­”" Ì­”# Ì­”1 Ì­+”2 Ì­,”9 Ì­3”: Ì­4”; Ì­5” Ì®” Ì®” Ì®” Ì®” Ì®”# Ì®”$ Ì®”& Ì® ”' Ì®!”5 Ì®/”6 Ì®0”ÌA Ì®;”ÌB Ì®<”ÌC Ì®=” Ì¯” Ì¯” Ì¯” Ì¯” Ì¯” Ì¯” Ì¯”  Ì¯”! Ì¯”/ Ì¯)”0 Ì¯*”7 Ì¯1”8 Ì¯2”9 Ì¯3” Ì°” Ì°” Ì°” Ì°” Ì°” Ì°” Ì°”! Ì°”" Ì°”0 Ì°*”1 Ì°+”9 Ì°3”: Ì°4”; Ì°5”” Ì±” Ì±” Ì±” Ì±”” Ì²” Ì²” Ì²” Ì²”” Ì³” Ì³” Ì³” Ì³“”	 Ì´”
+ Ì´” Ì´’” Ìµ” Ìµ”” Ì·”	 Ì·”
+ Ì·” Ì·–” Ì¸” Ì¸” Ì¸	” Ì¸” Ì¸” Ì¸”” Ì¸” Ì¸” Ì¸!” Ì¸"’” Ì¹” Ì¹œ” Ìº” Ìº
+” Ìº” Ìº”! Ìº”0 Ìº*”1 Ìº+”> Ìº8”? Ìº9”ÌH ÌºÌB”ÌI ÌºÌC”ÌJ ÌºÌD˜” Ì»” Ì»” Ì»”" Ì»”# Ì»”' Ì»!”( Ì»"”) Ì»#” Ì¼” Ì¼
+” Ì¼” Ì¼” Ì¼” Ì¼”  Ì¼”( Ì¼"”) Ì¼#”. Ì¼(”/ Ì¼)”9 Ì¼3”: Ì¼4”; Ì¼5–” Ì½” Ì½
+” Ì½” Ì½ ” Ì½"” Ì½#—” Ì¾” Ì¾” Ì¾” Ì¾”! Ì¾”# Ì¾”% Ì¾” Ì¿” Ì¿” Ì¿” Ì¿” Ì¿” Ì¿” Ì¿”+ Ì¿#”, Ì¿$”. Ì¿&”/ Ì¿'”0 Ì¿(”1 Ì¿)‘” ÌÀ–” ÌÁ” ÌÁ” ÌÁ	” ÌÁ” ÌÁ” ÌÁ”” ÌÂ” ÌÂ” ÌÂ” ÌÂ‘”	 ÌÃ”” ÌÃ” ÌÃ” ÌÃ” ÌÃ”” ÌÃ” ÌÃ” ÌÃ” ÌÃ‘”	 ÌÃ ’” ÌÄ” ÌÄ–” ÌÆ”	 ÌÆ”
+ ÌÆ” ÌÆ”  ÌÆ”( ÌÆ.–” ÌÇ” ÌÇ” ÌÇ	” ÌÇ” ÌÇ” ÌÇ”” ÌÇ” ÌÇ” ÌÇ!” ÌÇ"’” ÌÈ” ÌÈœ” ÌÉ” ÌÉ
+” ÌÉ” ÌÉ”! ÌÉ”0 ÌÉ*”1 ÌÉ+”> ÌÉ8”? ÌÉ9”ÌH ÌÉÌB”ÌI ÌÉÌC”ÌJ ÌÉÌD–” ÌÊ” ÌÊ
+” ÌÊ” ÌÊ”! ÌÊ”# ÌÊš” ÌË” ÌË” ÌË”" ÌË”# ÌË”- ÌË%”/ ÌË'”7 ÌË/”8 ÌË0”9 ÌË1‘” ÌÌ˜” ÌÍ” ÌÍ” ÌÍ”" ÌÍ”# ÌÍ”' ÌÍ!”( ÌÍ"”) ÌÍ#” ÌÎ” ÌÎ
+” ÌÎ” ÌÎ” ÌÎ” ÌÎ”  ÌÎ”( ÌÎ"”) ÌÎ#”. ÌÎ(”/ ÌÎ)”9 ÌÎ3”: ÌÎ4”; ÌÎ5–” ÌÏ” ÌÏ
+” ÌÏ” ÌÏ ” ÌÏ"” ÌÏ#—” ÌĞ” ÌĞ” ÌĞ” ÌĞ”! ÌĞ”# ÌĞ”% ÌĞ” ÌÑ” ÌÑ” ÌÑ” ÌÑ” ÌÑ” ÌÑ” ÌÑ”+ ÌÑ#”, ÌÑ$”. ÌÑ&”/ ÌÑ'”0 ÌÑ(”1 ÌÑ)‘” ÌÒ–” ÌÓ” ÌÓ” ÌÓ	” ÌÓ” ÌÓ” ÌÓ”” ÌÔ” ÌÔ” ÌÔ” ÌÔ‘”	 ÌÕ”” ÌÕ” ÌÕ” ÌÕ” ÌÕ”” ÌÕ” ÌÕ” ÌÕ” ÌÕ‘”	 ÌÕ ’” ÌÖ” ÌÖ’” ÌØ” ÌØ’” ÌÙ”- ÌÙ+” ÌÚ”	 ÌÚ”
+ ÌÚ” ÌÚ” ÌÚ” ÌÚ"” ÌÚ$”) ÌÚ7”+ ÌÚ9”0 ÌÚÌF”2 ÌÚÌH”8 ÌÚÌV”: ÌÚÌX”ÌD ÌÚÌj–” ÌÛ” ÌÛ” ÌÛ	” ÌÛ” ÌÛ” ÌÛ•” ÌÛ” ÌÛ” ÌÛ ” ÌÛ!” ÌÛ"’” Ìİ” Ìİ˜” ÌŞ” ÌŞ
+” ÌŞ” ÌŞ” ÌŞ”* ÌŞ$”, ÌŞ&”- ÌŞ'œ” Ìà” Ìà
+” Ìà” Ìà”! Ìà”0 Ìà*”1 Ìà+”> Ìà8”? Ìà9”ÌE Ìà?”ÌF ÌàÌ@”ÌG ÌàÌAš” Ìá” Ìá” Ìá” Ìá” Ìá”# Ìá”% Ìá”+ Ìá%”, Ìá&”- Ìá'” Ìâ” Ìâ
+” Ìâ” Ìâ” Ìâ” Ìâ”  Ìâ”( Ìâ"”) Ìâ#”. Ìâ(”/ Ìâ)”9 Ìâ3”: Ìâ4”; Ìâ5˜” Ìä” Ìä
+” Ìä” Ìä” Ìä”  Ìä”" Ìä”$ Ìä–” Ìå” Ìå
+” Ìå” Ìå” Ìå” Ìå˜” Ìæ” Ìæ” Ìæ” Ìæ” Ìæ”& Ìæ”( Ìæ ”) Ìæ!•” Ìç” Ìç” Ìç” Ìç” Ìç‘” ÌèÜ ” Ìê” Ìê
+” Ìê”! Ìê”# Ìê”$ Ìê”- Ìê'”. Ìê(”0 Ìê*”1 Ìê+”? Ìê9”Ì@ Ìê:”ÌI ÌêÌC”ÌJ ÌêÌD”ÌK ÌêÌE”ÌL ÌêÌF–” Ìë” Ìë” Ìë	” Ìë” Ìë” Ìë–” Ìí” Ìí
+” Ìí”! Ìí”& Ìí ”( Ìí"˜” Ìî” Ìî” Ìî” Ìî” Ìî”& Ìî”( Ìî ”) Ìî!•” Ìï” Ìï” Ìï” Ìï” Ìï‘” Ìğ’” Ìò” Ìòœ” Ìó” Ìó” Ìó” Ìó4” Ìó6”% Ìó=”' Ìó?”5 ÌóÌM”8 ÌóÌP”= ÌóÌU”? ÌóÌW”Ì@ ÌóÌX” Ìô” Ìô” Ìô” Ìô” Ìô”  Ìô”& Ìô ”' Ìô!”. Ìô(”0 Ìô*”: Ìô4”; Ìô5”< Ìô6’” Ìö” Ìö”” Ì÷” Ì÷” Ì÷” Ì÷5”” Ìø” Ìø” Ìø” Ìø”” Ìù” Ìù” Ìù”' Ìù”” Ìú” Ìú” Ìú”) Ìú!”” Ìû” Ìû” Ìû” Ìû™” Ìü” Ìü” Ìü”! Ìü”% Ìü”' Ìü”( Ìü ”6 Ìü.”8 Ìü0”” Ìı” Ìı” Ìı”! Ìı–” Ìş” Ìş” Ìş” Ìş” Ìş”" Ìş’” Ìÿ” Ìÿ” Í ” Í ” Í ” Í ” Í ”  Í ”& Í  ”' Í !”/ Í )”1 Í +”9 Í 3”: Í 4”; Í 5’” Í”) Í#˜” Í” Í
+” Í” Í” Í”  Í”" Í”# Í”” Í” Í” Í” Í‘”	 Í”” Í” Í” Í” Í˜” Í” Í
+” Í” Í” Í”" Í”$ Í”% Í•” Í	” Í	” Í	” Í	” Í	‘”	 Í
+’” Í” Í’” Í” Í–” Í”	 Í”
+ Í” Í” Í” Í"–” Í” Í” Í	” Í” Í” Í”” Í” Í” Í!” Í"’” Í” Íœ” Í” Í
+” Í” Í”! Í”0 Í*”1 Í+”> Í8”? Í9”ÌG ÍÌA”ÌH ÍÌB”ÌI ÍÌCš” Í” Í” Í” Í” Í”( Í"”* Í$”0 Í*”1 Í+”2 Í,š” Í” Í” Í”" Í”# Í”' Í!”( Í"”) Í#”* Í$”3 Í-” Í” Í
+” Í” Í” Í” Í”  Í”( Í"”) Í#”. Í(”/ Í)”9 Í3”: Í4”; Í5–” Í” Í
+” Í” Í” Í ” Í!—” Í” Í” Í” Í”! Í”# Í”% Í•” Í” Í” Í” Í” Í” Í
+” Í” Í” Í” Í”" Í”# Í”% Í”& Í”4 Í*”5 Í+”9 Í/”: Í0”; Í1” Í
+” Í”  Í”" Í”# Í”* Í ”+ Í!”- Í#”. Í$”< Í2”= Í3”ÌJ ÍÌ@”ÌK ÍÌA”ÌL ÍÌB” Í
+” Í” Í” Í” Í”' Í”( Í”* Í ”+ Í!”9 Í/”: Í0”ÌH Í>”ÌI Í?”ÌJ ÍÌ@” Í
+” Í” Í” Í” Í”' Í”( Í”* Í ”+ Í!”9 Í/”: Í0”ÌA Í7”ÌB Í8”ÌC Í9” Í
+” Í” Í” Í” Í”& Í”' Í”) Í”* Í ”8 Í.”9 Í/”ÌF Í<”ÌG Í=”ÌH Í>” Í
+” Í” Í” Í” Í”( Í”) Í”+ Í!”, Í"”: Í0”; Í1”ÌF Í<”ÌG Í=”ÌH Í>” Í
+” Í” Í” Í” Í”& Í”' Í”) Í”* Í ”8 Í.”9 Í/”ÌA Í7”ÌB Í8”ÌC Í9“” Í	” Í
+” Í‘” Í –” Í!” Í!” Í!	” Í!” Í!” Í!”” Í"” Í"” Í"” Í"‘”	 Í#”” Í#” Í#” Í#” Í#”” Í#” Í#” Í#” Í#‘”	 Í# ’” Í$” Í$’” Í&” Í&–” Í'”	 Í'”
+ Í'” Í'” Í'”& Í',–” Í(” Í(” Í(	” Í(” Í(” Í(”” Í(” Í(” Í(!” Í("’” Í)” Í)œ” Í*” Í*
+” Í*” Í*”! Í*”0 Í**”1 Í*+”> Í*8”? Í*9”ÌG Í*ÌA”ÌH Í*ÌB”ÌI Í*ÌCš” Í+” Í+” Í+” Í+” Í+”, Í+&”. Í+(”8 Í+2”9 Í+3”: Í+4˜” Í,” Í,” Í,”" Í,”# Í,”' Í,!”( Í,"”) Í,#” Í-” Í-
+” Í-” Í-” Í-” Í-”  Í-”( Í-"”) Í-#”. Í-(”/ Í-)”9 Í-3”: Í-4”; Í-5–” Í.” Í.
+” Í.” Í.” Í. ” Í.!—” Í/” Í/” Í/” Í/”! Í/”# Í/”% Í/•” Í0” Í0” Í0” Í0” Í0” Í1
+” Í1” Í1” Í1” Í1”" Í1”# Í1”% Í1”& Í1”4 Í1*”5 Í1+”9 Í1/”: Í10”; Í11” Í2
+” Í2”  Í2”" Í2”# Í2”* Í2 ”+ Í2!”- Í2#”. Í2$”< Í22”= Í23”ÌJ Í2Ì@”ÌK Í2ÌA”ÌL Í2ÌB” Í3
+” Í3” Í3” Í3” Í3”' Í3”( Í3”* Í3 ”+ Í3!”9 Í3/”: Í30”ÌH Í3>”ÌI Í3?”ÌJ Í3Ì@” Í4
+” Í4” Í4” Í4” Í4”' Í4”( Í4”* Í4 ”+ Í4!”9 Í4/”: Í40”ÌA Í47”ÌB Í48”ÌC Í49” Í5
+” Í5” Í5” Í5” Í5”& Í5”' Í5”) Í5”* Í5 ”8 Í5.”9 Í5/”ÌF Í5<”ÌG Í5=”ÌH Í5>” Í6
+” Í6” Í6” Í6” Í6”( Í6”) Í6”+ Í6!”, Í6"”: Í60”; Í61”ÌF Í6<”ÌG Í6=”ÌH Í6>” Í7
+” Í7” Í7” Í7” Í7”& Í7”' Í7”) Í7”* Í7 ”8 Í7.”9 Í7/”ÌA Í77”ÌB Í78”ÌC Í79“” Í8	” Í8
+” Í8‘” Í9–” Í:” Í:” Í:	” Í:” Í:” Í:”” Í;” Í;” Í;” Í;‘”	 Í<”” Í<” Í<” Í<” Í<”” Í<” Í<” Í<” Í<‘”	 Í< ’” Í=” Í=’” Í?” Í?˜” Í@”	 Í@”
+ Í@” Í@” Í@”# Í@)”% Í@+”. Í@<–” ÍA” ÍA” ÍA	” ÍA” ÍA” ÍA”” ÍA” ÍA” ÍA$” ÍA%’” ÍB” ÍBš” ÍC” ÍC” ÍC” ÍC2” ÍC4”" ÍC:”$ ÍC<”- ÍCÌE”/ ÍCÌG”0 ÍCÌHœ” ÍD” ÍD
+” ÍD” ÍD”! ÍD”0 ÍD*”1 ÍD+”> ÍD8”? ÍD9”ÌG ÍDÌA”ÌH ÍDÌB”ÌI ÍDÌCš” ÍE” ÍE” ÍE” ÍE” ÍE”# ÍE”% ÍE”, ÍE&”- ÍE'”. ÍE(” ÍF” ÍF” ÍF” ÍF” ÍF”  ÍF”& ÍF ”' ÍF!”, ÍF&”. ÍF(”8 ÍF2”9 ÍF3”: ÍF4”” ÍG” ÍG” ÍG” ÍG‘”	 ÍH”” ÍH” ÍH” ÍH” ÍH”” ÍH” ÍH” ÍH” ÍH‘”	 ÍH!’” ÍI” ÍI–” ÍK”	 ÍK”
+ ÍK” ÍK” ÍK”( ÍK.–” ÍL” ÍL” ÍL	” ÍL” ÍL” ÍL”” ÍL” ÍL” ÍL!” ÍL"’” ÍM” ÍMœ” ÍN” ÍN
+” ÍN” ÍN”! ÍN”0 ÍN*”1 ÍN+”> ÍN8”? ÍN9”ÌH ÍNÌB”ÌI ÍNÌC”ÌJ ÍNÌDš” ÍO” ÍO” ÍO” ÍO” ÍO”, ÍO&”. ÍO(”8 ÍO2”9 ÍO3”: ÍO4˜” ÍP” ÍP” ÍP”" ÍP”# ÍP”' ÍP!”( ÍP"”) ÍP#” ÍQ” ÍQ
+” ÍQ” ÍQ” ÍQ” ÍQ”  ÍQ”( ÍQ"”) ÍQ#”. ÍQ(”/ ÍQ)”9 ÍQ3”: ÍQ4”; ÍQ5–” ÍR” ÍR
+” ÍR” ÍR ” ÍR"” ÍR#–” ÍS” ÍS” ÍS” ÍS”! ÍS”# ÍS” ÍS” ÍS#” ÍS$” ÍS(” ÍS)” ÍS-” ÍS.”+ ÍS:”, ÍS;”. ÍS=”/ ÍS>”0 ÍS?”1 ÍSÌ@–” ÍT” ÍT” ÍT	” ÍT” ÍT” ÍT”” ÍU” ÍU” ÍU” ÍU‘”	 ÍV”” ÍV” ÍV” ÍV” ÍV”” ÍV” ÍV” ÍV” ÍV‘”	 ÍV ’” ÍW” ÍW–” ÍY”	 ÍY”
+ ÍY” ÍY” ÍY”! ÍY'–” ÍZ” ÍZ” ÍZ	” ÍZ” ÍZ” ÍZ”” ÍZ” ÍZ” ÍZ$” ÍZ%’” Í[” Í[œ” Í\” Í\
+” Í\” Í\”! Í\”0 Í\*”1 Í\+”> Í\8”? Í\9”ÌH Í\ÌB”ÌI Í\ÌC”ÌJ Í\ÌDš” Í]” Í]” Í]” Í]” Í]”# Í]”% Í]”. Í](”/ Í])”0 Í]*›” Í^” Í^” Í^” Í^” Í^”  Í^”& Í^ ”' Í^!”1 Í^+”2 Í^,”3 Í^-”” Í_” Í_” Í_” Í_‘”	 Í`”” Í`” Í`” Í`” Í`”” Í`” Í`” Í`” Í`‘”	 Í`!’” Ía” ÍaŸ” Íc”	 Íc”
+ Íc” Íc” Íc”! Íc'”# Íc)”' Íc5”) Íc7”. ÍcÌD”0 ÍcÌF”6 ÍcÌT”8 ÍcÌV”ÌF ÍcÌl”ÌH ÍcÌn–” Íd” Íd” Íd	” Íd” Íd” Íd”” Íd” Íd” Íd$” Íd%’” Íe” Íe”” Íf” Íf” Íf” Íf2”” Íg” Íg” Íg” Íg”” Íh” Íh” Íh” Íh”” Íi” Íi” Íi”! Íi”” Íj” Íj” Íj”( Íj ’” Ík” Íkœ” Íl” Íl
+” Íl” Íl”! Íl”0 Íl*”1 Íl+”> Íl8”? Íl9”ÌH ÍlÌB”ÌI ÍlÌC”ÌJ ÍlÌDš” Ím” Ím” Ím” Ím” Ím”# Ím”% Ím”. Ím(”/ Ím)”0 Ím*” Ín” Ín” Ín” Ín” Ín”  Ín”& Ín ”' Ín!”, Ín&”. Ín(”8 Ín2”9 Ín3”: Ín4”” Ío” Ío” Ío” Ío‘”	 Íp”” Íp” Íp” Íp” Íp”” Íp” Íp” Íp” Íp‘”	 Íp!’” Íq” Íq˜” Ís”	 Ís”
+ Ís” Ís” Ís”! Ís'”# Ís)”, Ís:–” Ít” Ít” Ít	” Ít” Ít” Ít”” Ít” Ít” Ít$” Ít%’” Íu” Íuš” Ív” Ív” Ív” Ív2” Ív4”" Ív:”$ Ív<”- ÍvÌE”/ ÍvÌG”0 ÍvÌHœ” Íw” Íw
+” Íw” Íw”! Íw”0 Íw*”1 Íw+”> Íw8”? Íw9”ÌE Íw?”ÌF ÍwÌ@”ÌG ÍwÌAš” Íx” Íx” Íx” Íx” Íx”# Íx”% Íx”+ Íx%”, Íx&”- Íx'” Íy” Íy” Íy” Íy” Íy”  Íy”& Íy ”' Íy!”, Íy&”. Íy(”8 Íy2”9 Íy3”: Íy4”” Íz” Íz” Íz” Íz‘”	 Í{”” Í{” Í{” Í{” Í{”” Í{” Í{” Í{ ” Í{!‘”	 Í{#’” Í|” Í|˜” Í~”	 Í~”
+ Í~” Í~” Í~” Í~"” Í~$”' Í~5–” Í” Í” Í	” Í” Í” Í’” Í” Í’” Í€” Í€” Í” Í” Í” Í2” Í4”# Í;”% Í=”+ ÍÌC”- ÍÌE”7 ÍÌO”9 ÍÌQ”ÌB ÍÌZ”ÌD ÍÌ\”ÌE ÍÌ]” Í‚” Í‚” Í‚” Í‚” Í‚”  Í‚”& Í‚ ”' Í‚!”1 Í‚+”3 Í‚-”8 Í‚2”9 Í‚3”: Í‚4‘”	 Íƒ•” Íƒ” Íƒ” Íƒ” Íƒ” Íƒ’” Í„” Í„–” Í†”	 Í†”
+ Í†” Í†” Í†” Í†%–” Í‡” Í‡” Í‡	” Í‡” Í‡” Í‡”” Í‡” Í‡” Í‡!” Í‡"’” Íˆ” Íˆœ” Í‰” Í‰
+” Í‰” Í‰”! Í‰”0 Í‰*”1 Í‰+”> Í‰8”? Í‰9”ÌI Í‰ÌC”ÌJ Í‰ÌD”ÌK Í‰ÌEš” ÍŠ” ÍŠ” ÍŠ” ÍŠ” ÍŠ”( ÍŠ"”* ÍŠ$”0 ÍŠ*”1 ÍŠ+”2 ÍŠ,” Í‹” Í‹
+” Í‹” Í‹” Í‹” Í‹”  Í‹”( Í‹"”) Í‹#”. Í‹(”/ Í‹)”9 Í‹3”: Í‹4”; Í‹5–” ÍŒ” ÍŒ
+” ÍŒ” ÍŒ” ÍŒ” ÍŒ–” Í” Í” Í” Í”! Í”# ÍÜ ” Í” Í"” Í#” Í'” Í(” Í*” Í+”# Í2”$ Í3”& Í5”' Í6”5 ÍÌD”6 ÍÌE”ÌB ÍÌQ”ÌC ÍÌR”ÌD ÍÌS”ÌE ÍÌT”ÌF ÍÌU–” Í” Í” Í	” Í” Í” Í—” Í” Í
+” Í” Í” Í” Í”  Í”” Í” Í#” Í%” Í&œ” Í‘” Í‘
+” Í‘”! Í‘”% Í‘”4 Í‘.”5 Í‘/”ÌB Í‘<”ÌC Í‘=”ÌL Í‘ÌF”ÌM Í‘ÌG”ÌN Í‘ÌHš” Í’” Í’” Í’” Í’” Í’”" Í’”$ Í’”' Í’!”( Í’"”) Í’#” Í“” Í“
+” Í“” Í“” Í“”# Í“”$ Í“”, Í“&”- Í“'”2 Í“,”3 Í“-”ÌA Í“;”ÌB Í“<”ÌC Í“=–” Í”” Í”
+” Í”” Í” ” Í”"” Í”#–” Í•” Í•” Í•” Í•”% Í•”' Í•!” Í•#” Í•'” Í•(” Í•,” Í•-” Í•1” Í•2”+ Í•>”, Í•?”2 Í•ÌE”3 Í•ÌF”4 Í•ÌG”5 Í•ÌH–” Í–” Í–” Í–” Í–” Í–” Í–”” Í—” Í—” Í—” Í—‘”	 Í˜”” Í˜” Í˜” Í˜” Í˜”” Í˜” Í˜” Í˜” Í˜‘”	 Í˜ ’” Í™” Í™–” Í›”	 Í›”
+ Í›” Í›” Í›”  Í›&–” Íœ” Íœ” Íœ	” Íœ” Íœ” Íœ”” Íœ” Íœ” Íœ!” Íœ"’” Í” Íœ” Í” Í
+” Í” Í”! Í”0 Í*”1 Í+”> Í8”? Í9”ÌH ÍÌB”ÌI ÍÌC”ÌJ ÍÌDš” ÍŸ” ÍŸ” ÍŸ” ÍŸ”  ÍŸ”& ÍŸ ”( ÍŸ"”/ ÍŸ)”0 ÍŸ*”1 ÍŸ+˜” Í ” Í ” Í ”" Í ”# Í ”' Í !”( Í "”) Í #” Í¡” Í¡
+” Í¡” Í¡” Í¡” Í¡”  Í¡”( Í¡"”) Í¡#”. Í¡(”/ Í¡)”9 Í¡3”: Í¡4”; Í¡5–” Í¢” Í¢
+” Í¢” Í¢ ” Í¢"” Í¢#–” Í£” Í£” Í£” Í£”! Í£”# Í£” Í£” Í£#” Í£$” Í£(” Í£)” Í£-” Í£.”+ Í£:”, Í£;”. Í£=”/ Í£>”0 Í£?”1 Í£Ì@–” Í¤” Í¤” Í¤	” Í¤” Í¤” Í¤”” Í¥” Í¥” Í¥” Í¥‘”	 Í¦”” Í¦” Í¦” Í¦” Í¦”” Í¦” Í¦” Í¦” Í¦‘”	 Í¦ ’” Í§” Í§›” Í©”	 Í©”
+ Í©” Í©” Í©” Í© ” Í©"”% Í©3”' Í©5”/ Í©ÌE”0 Í©ÌF–” Íª” Íª” Íª	” Íª” Íª” Íª”” Íª” Íª” Íª$” Íª%’” Í«” Í«œ” Í¬” Í¬
+” Í¬” Í¬”! Í¬”0 Í¬*”1 Í¬+”> Í¬8”? Í¬9”ÌE Í¬?”ÌF Í¬Ì@”ÌG Í¬ÌAÜ ” Í­” Í­” Í­” Í­” Í­”( Í­"”* Í­$”0 Í­*”1 Í­+”2 Í­,”9 Í­3”: Í­4”ÌF Í­Ì@”ÌH Í­ÌB”ÌQ Í­ÌK”ÌR Í­ÌL”ÌS Í­ÌM” Í®” Í®
+” Í®” Í®” Í®” Í®”  Í®”( Í®"”) Í®#”. Í®(”/ Í®)”9 Í®3”: Í®4”; Í®5—” Í°” Í°
+” Í°” Í°” Í°”! Í°”# Í°Ü ” Í±” Í±”  Í±”# Í±”% Í±”& Í±”- Í±%”. Í±&”0 Í±(”1 Í±)”? Í±7”Ì@ Í±8”ÌG Í±?”ÌH Í±Ì@”ÌI Í±ÌA”ÌJ Í±ÌBœ” Í²” Í²” Í²” Í²2” Í²4”# Í²9”% Í²;”1 Í²ÌG”4 Í²ÌJ”9 Í²ÌO”; Í²ÌQ”< Í²ÌR” Í³” Í³” Í³” Í³”# Í³”$ Í³”* Í³"”+ Í³#”0 Í³(”2 Í³*”< Í³4”= Í³5”> Í³6‘” Í´‘” Í´Ü ” Íµ” Íµ” Íµ” Íµ2” Íµ4”% Íµ;”' Íµ=”- ÍµÌC”/ ÍµÌE”9 ÍµÌO”; ÍµÌQ”ÌD ÍµÌZ”ÌF ÍµÌ\”ÌK ÍµÌa”ÌM ÍµÌc”ÌR ÍµÌh”ÌT ÍµÌj”ÌU ÍµÌk” Í¶” Í¶” Í¶” Í¶”# Í¶”$ Í¶”* Í¶"”+ Í¶#”1 Í¶)”3 Í¶+”8 Í¶0”9 Í¶1”: Í¶2‘” Í·–” Í¸” Í¸” Í¸	” Í¸” Í¸” Í¸”” Í¹” Í¹” Í¹” Í¹‘”	 Íº”” Íº” Íº” Íº” Íº”” Íº” Íº” Íº” Íº‘”	 Íº!’” Í»” Í»–” Í½”	 Í½”
+ Í½” Í½” Í½” Í½"–” Í¾” Í¾” Í¾	” Í¾” Í¾” Í¾”” Í¾” Í¾” Í¾!” Í¾"’” Í¿” Í¿œ” ÍÀ” ÍÀ
+” ÍÀ” ÍÀ”! ÍÀ”0 ÍÀ*”1 ÍÀ+”> ÍÀ8”? ÍÀ9”ÌE ÍÀ?”ÌF ÍÀÌ@”ÌG ÍÀÌAš” ÍÁ” ÍÁ” ÍÁ” ÍÁ” ÍÁ”( ÍÁ"”* ÍÁ$”0 ÍÁ*”1 ÍÁ+”2 ÍÁ,” ÍÂ” ÍÂ
+” ÍÂ” ÍÂ” ÍÂ” ÍÂ”  ÍÂ”( ÍÂ"”) ÍÂ#”. ÍÂ(”/ ÍÂ)”9 ÍÂ3”: ÍÂ4”; ÍÂ5–” ÍÄ” ÍÄ
+” ÍÄ” ÍÄ$” ÍÄ&” ÍÄ'—” ÍÅ” ÍÅ” ÍÅ” ÍÅ”! ÍÅ”# ÍÅ”% ÍÅ•” ÍÆ” ÍÆ” ÍÆ” ÍÆ” ÍÆ” ÍÇ
+” ÍÇ” ÍÇ” ÍÇ” ÍÇ”& ÍÇ”' ÍÇ”) ÍÇ”* ÍÇ ”8 ÍÇ.”9 ÍÇ/”= ÍÇ3”> ÍÇ4”? ÍÇ5” ÍÈ
+” ÍÈ” ÍÈ”! ÍÈ”" ÍÈ”) ÍÈ”* ÍÈ ”, ÍÈ"”- ÍÈ#”; ÍÈ1”< ÍÈ2”ÌH ÍÈ>”ÌI ÍÈ?”ÌJ ÍÈÌ@” ÍÉ
+” ÍÉ” ÍÉ” ÍÉ” ÍÉ”% ÍÉ”& ÍÉ”( ÍÉ”) ÍÉ”7 ÍÉ-”8 ÍÉ.”? ÍÉ5”Ì@ ÍÉ6”ÌA ÍÉ7“” ÍÊ	” ÍÊ
+” ÍÊ‘” ÍË–” ÍÌ” ÍÌ” ÍÌ	” ÍÌ” ÍÌ” ÍÌ–” ÍÎ” ÍÎ
+” ÍÎ” ÍÎ#” ÍÎ%”  ÍÎ&—” ÍÏ” ÍÏ” ÍÏ” ÍÏ” ÍÏ”& ÍÏ ”( ÍÏ"œ” ÍĞ” ÍĞ” ÍĞ” ÍĞ”# ÍĞ”2 ÍĞ*”3 ÍĞ+”Ì@ ÍĞ8”ÌA ÍĞ9”ÌJ ÍĞÌB”ÌK ÍĞÌC”ÌL ÍĞÌDœ” ÍÑ” ÍÑ” ÍÑ”  ÍÑ”! ÍÑ”% ÍÑ”' ÍÑ”+ ÍÑ#”, ÍÑ$”5 ÍÑ-”6 ÍÑ.”7 ÍÑ/” ÍÒ” ÍÒ” ÍÒ” ÍÒ”# ÍÒ”' ÍÒ”( ÍÒ ”0 ÍÒ(”1 ÍÒ)”6 ÍÒ.”7 ÍÒ/”? ÍÒ7”Ì@ ÍÒ8”ÌA ÍÒ9—” ÍÓ” ÍÓ” ÍÓ” ÍÓ”' ÍÓ”) ÍÓ!”+ ÍÓ#›” ÍÔ
+” ÍÔ” ÍÔ”" ÍÔ%”& ÍÔ)”' ÍÔ*”3 ÍÔ6”4 ÍÔ7”: ÍÔ=”; ÍÔ>”< ÍÔ?Ü ” ÍÕ
+” ÍÕ”  ÍÕ”# ÍÕ”' ÍÕ”/ ÍÕ%”0 ÍÕ&”7 ÍÕ-”9 ÍÕ/”= ÍÕ3”> ÍÕ4”ÌD ÍÕ:”ÌF ÍÕ<”ÌJ ÍÕÌ@”ÌK ÍÕÌA”ÌP ÍÕÌF”ÌQ ÍÕÌG”ÌR ÍÕÌH˜” ÍÖ
+” ÍÖ” ÍÖ”# ÍÖ”$ ÍÖ”, ÍÖ"”- ÍÖ#”. ÍÖ$‘” Í×	–” ÍØ” ÍØ” ÍØ” ÍØ” ÍØ” ÍØ‘” ÍÙ”” ÍÚ” ÍÚ” ÍÚ” ÍÚ‘”	 ÍÛ”” ÍÛ” ÍÛ” ÍÛ” ÍÛ”” ÍÛ” ÍÛ” ÍÛ” ÍÛ‘”	 ÍÛ’” ÍÜ” ÍÜ–” ÍŞ”	 ÍŞ”
+ ÍŞ” ÍŞ” ÍŞ” ÍŞ%–” Íß” Íß” Íß	” Íß” Íß” Íß”” Íß” Íß” Íß$” Íß%’” Íà” Íàœ” Íá” Íá
+” Íá” Íá”! Íá”0 Íá*”1 Íá+”> Íá8”? Íá9”ÌE Íá?”ÌF ÍáÌ@”ÌG ÍáÌAš” Íâ” Íâ” Íâ” Íâ” Íâ”# Íâ”% Íâ”+ Íâ%”, Íâ&”- Íâ'›” Íã” Íã” Íã” Íã” Íã”  Íã”& Íã ”' Íã!”1 Íã+”2 Íã,”3 Íã-”” Íä” Íä” Íä” Íä‘”	 Íå”” Íå” Íå” Íå” Íå”” Íå” Íå” Íå” Íå‘”	 Íå ’” Íæ” Íæ˜” Íè”	 Íè”
+ Íè” Íè” Íè” Íè"” Íè$”' Íè5–” Íé” Íé” Íé	” Íé” Íé” Íé”” Íé” Íé” Íé$” Íé%’” Íê” Íêœ” Íë” Íë
+” Íë” Íë”! Íë”0 Íë*”1 Íë+”> Íë8”? Íë9”ÌE Íë?”ÌF ÍëÌ@”ÌG ÍëÌAÜ ” Íì” Íì” Íì” Íì” Íì”( Íì"”* Íì$”0 Íì*”1 Íì+”2 Íì,”9 Íì3”: Íì4”ÌF ÍìÌ@”ÌH ÍìÌB”ÌQ ÍìÌK”ÌR ÍìÌL”ÌS ÍìÌM” Íí” Íí
+” Íí” Íí” Íí” Íí”  Íí”( Íí"”) Íí#”. Íí(”/ Íí)”9 Íí3”: Íí4”; Íí5˜” Íî” Íî
+” Íî” Íî” Íî” Íî”# Íî”$ Íî–” Íï” Íï” Íï	” Íï” Íï” Íï–” Íğ” Íğ” Íğ” Íğ” Íğ” Íğ‘”	 Íñ”” Íñ” Íñ” Íñ” Íñ”” Íñ” Íñ” Íñ” Íñ‘”	 Íñ!’” Íò” Íò‘” Íó—”  Íô ” Íô” Íô” Íô”" Íô"”$ Íô$”% Íô%ÔrI–§version¤file§sources®sourcesContent¥names¨mappingsÀ‘À‘ÀÜ‘”    ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”  	 ‘”  
+ ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”    ‘”  ! ‘”  " ‘”  # ‘”  $ ‘”  % ‘”  & ‘”  ' ‘”  ( ‘”  ) ‘”  * ‘”  + ‘”  , ‘”  - ‘”  . ‘”  / ‘”  0 ‘”  1 ‘”  2 ‘”  3 ‘”  4 ‘”  5 ‘”  6 ‘”  7 ‘”  8 ‘”  9 ‘”  : ‘”  ; ‘”  < ‘”  = ‘”  > ‘”  ? ‘”  Ì@ ‘”  ÌA ‘”  ÌB ‘”  ÌC ‘”  ÌD ‘”  ÌE ‘”  ÌF ‘”  ÌG ‘”  ÌH ‘”  ÌI ‘”  ÌJ ‘”  ÌK ‘”  ÌL ‘”  ÌM ‘”  ÌN ‘”  ÌO ‘”  ÌP ‘”  ÌQ ‘”  ÌR ‘”  ÌS ‘”  ÌT ‘”  ÌU ‘”  ÌV ‘”  ÌW ‘”  ÌX ‘”  ÌY ‘”  ÌZ ‘”  Ì[ ‘”  Ì\ ‘”  Ì] ‘”  Ì^ ‘”  Ì_ ‘”  Ì` ‘”  Ìa ‘”  Ìb ‘”  Ìc ‘”  Ìd ‘”  Ìe ‘”  Ìf ‘”  Ìg ‘”  Ìh ‘”  Ìi ‘”  Ìj ‘”  Ìk ‘”  Ìl ‘”  Ìm ‘”  Ìn ‘”  Ìo ‘”  Ìp ‘”  Ìq ‘”  Ìr ‘”  Ìs ‘”  Ìt ‘”  Ìu ‘”  Ìv ‘”  Ìw ‘”  Ìx ‘”  Ìy ‘”  Ìz ‘”  Ì{ ‘”  Ì| ‘”  Ì} ‘”  Ì~ ‘”  Ì ‘”  Ì€ ‘”  Ì ‘”  Ì‚ ‘”  Ìƒ ‘”  Ì„ ‘”  Ì… ‘”  Ì† ‘”  Ì‡ ‘”  Ìˆ ‘”  Ì‰ ‘”  ÌŠ ‘”  Ì‹ ‘”  ÌŒ ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì‘ ‘”  Ì’ ‘”  Ì“ ‘”  Ì” ‘”  Ì• ‘”  Ì– ‘”  Ì— ‘”  Ì˜ ‘”  Ì™ ‘”  Ìš ‘”  Ì› ‘”  Ìœ ‘”  Ì ‘”  Ì ‘”  ÌŸ ‘”  Ì  ‘”  Ì¡ ‘”  Ì¢ ‘”  Ì£ ‘”  Ì¤ ‘”  Ì¥ ‘”  Ì¦ ‘”  Ì§ ‘”  Ì¨ ‘”  Ì© ‘”  Ìª ‘”  Ì« ‘”  Ì¬ ‘”  Ì­ ‘”  Ì® ‘”  Ì¯ ‘”  Ì° ‘”  Ì± ‘”  Ì² ‘”  Ì³ ‘”  Ì´ ‘”  Ìµ ‘”  Ì¶ ‘”  Ì· ‘”  Ì¸ ‘”  Ì¹ ‘”  Ìº ‘”  Ì» ‘”  Ì¼ ‘”  Ì½ ‘”  Ì¾ ‘”  Ì¿ ‘”  ÌÀ ‘”  ÌÁ ‘”  ÌÂ ‘”  ÌÃ ‘”  ÌÄ ‘”  ÌÅ ‘”  ÌÆ ‘”  ÌÇ ‘”  ÌÈ ‘”  ÌÉ ‘”  ÌÊ ‘”  ÌË ‘”  ÌÌ ‘”  ÌÍ ‘”  ÌÎ ‘”  ÌÏ ‘”  ÌĞ ‘”  ÌÑ ‘”  ÌÒ ‘”  ÌÓ ‘”  ÌÔ ‘”  ÌÕ ‘”  ÌÖ ‘”  Ì× ‘”  ÌØ ‘”  ÌÙ ‘”  ÌÚ ‘”  ÌÛ ‘”  ÌÜ ‘”  Ìİ ‘”  ÌŞ ‘”  Ìß ‘”  Ìà ‘”  Ìá ‘”  Ìâ ‘”  Ìã ‘”  Ìä ‘”  Ìå ‘”  Ìæ ‘”  Ìç ‘”  Ìè ‘”  Ìé ‘”  Ìê ‘”  Ìë ‘”  Ìì ‘”  Ìí ‘”  Ìî ‘”  Ìï ‘”  Ìğ ‘”  Ìñ ‘”  Ìò ‘”  Ìó ‘”  Ìô ‘”  Ìõ ‘”  Ìö ‘”  Ì÷ ‘”  Ìø ‘”  Ìù ‘”  Ìú ‘”  Ìû ‘”  Ìü ‘”  Ìı ‘”  Ìş ‘”  Ìÿ ‘”  Í  ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í	 ‘”  Í
+ ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í  ‘”  Í! ‘”  Í" ‘”  Í# ‘”  Í$ ‘”  Í% ‘”  Í& ‘”  Í' ‘”  Í( ‘”  Í) ‘”  Í* ‘”  Í+ ‘”  Í, ‘”  Í- ‘”  Í. ‘”  Í/ ‘”  Í0 ‘”  Í1 ‘”  Í2 ‘”  Í3 ‘”  Í4 ‘”  Í5 ‘”  Í6 ‘”  Í7 ‘”  Í8 ‘”  Í9 ‘”  Í: ‘”  Í; ‘”  Í< ‘”  Í= ‘”  Í> ‘”  Í? ‘”  Í@ ‘”  ÍA ‘”  ÍB ‘”  ÍC ‘”  ÍD ‘”  ÍE ‘”  ÍF ‘”  ÍG ‘”  ÍH ‘”  ÍI ‘”  ÍJ ‘”  ÍK ‘”  ÍL ‘”  ÍM ‘”  ÍN ‘”  ÍO ‘”  ÍP ‘”  ÍQ ‘”  ÍR ‘”  ÍS ‘”  ÍT ‘”  ÍU ‘”  ÍV ‘”  ÍW ‘”  ÍX ‘”  ÍY ‘”  ÍZ ‘”  Í[ ‘”  Í\ ‘”  Í] ‘”  Í^ ‘”  Í_ ‘”  Í` ‘”  Ía ‘”  Íb ‘”  Íc ‘”  Íd ‘”  Íe ‘”  Íf ‘”  Íg ‘”  Íh ‘”  Íi ‘”  Íj ‘”  Ík ‘”  Íl ‘”  Ím ‘”  Ín ‘”  Ío ‘”  Íp ‘”  Íq ‘”  Ír ‘”  Ís ‘”  Ít ‘”  Íu ‘”  Ív ‘”  Íw ‘”  Íx ‘”  Íy ‘”  Íz ‘”  Í{ ‘”  Í| ‘”  Í} ‘”  Í~ ‘”  Í ‘”  Í€ ‘”  Í ‘”  Í‚ ‘”  Íƒ ‘”  Í„ ‘”  Í… ‘”  Í† ‘”  Í‡ ‘”  Íˆ ‘”  Í‰ ‘”  ÍŠ ‘”  Í‹ ‘”  ÍŒ ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í‘ ‘”  Í’ ‘”  Í“ ‘”  Í” ‘”  Í• ‘”  Í– ‘”  Í— ‘”  Í˜ ‘”  Í™ ‘”  Íš ‘”  Í› ‘”  Íœ ‘”  Í ‘”  Í ‘”  ÍŸ ‘”  Í  ‘”  Í¡ ‘”  Í¢ ‘”  Í£ ‘”  Í¤ ‘”  Í¥ ‘”  Í¦ ‘”  Í§ ‘”  Í¨ ‘”  Í© ‘”  Íª ‘”  Í« ‘”  Í¬ ‘”  Í­ ‘”  Í® ‘”  Í¯ ‘”  Í° ‘”  Í± ‘”  Í² ‘”  Í³ ‘”  Í´ ‘”  Íµ ‘”  Í¶ ‘”  Í· ‘”  Í¸ ‘”  Í¹ ‘”  Íº ‘”  Í» ‘”  Í¼ ‘”  Í½ ‘”  Í¾ ‘”  Í¿ ‘”  ÍÀ ‘”  ÍÁ ‘”  ÍÂ ‘”  ÍÃ ‘”  ÍÄ ‘”  ÍÅ ‘”  ÍÆ ‘”  ÍÇ ‘”  ÍÈ ‘”  ÍÉ ‘”  ÍÊ ‘”  ÍË ‘”  ÍÌ ‘”  ÍÍ ‘”  ÍÎ ‘”  ÍÏ ‘”  ÍĞ ‘”  ÍÑ ‘”  ÍÒ ‘”  ÍÓ ‘”  ÍÔ ‘”  ÍÕ ‘”  ÍÖ ‘”  Í× ‘”  ÍØ ‘”  ÍÙ ‘”  ÍÚ ‘”  ÍÛ ‘”  ÍÜ ‘”  Íİ ‘”  ÍŞ ‘”  Íß ‘”  Íà ‘”  Íá ‘”  Íâ ‘”  Íã ‘”  Íä ‘”  Íå ‘”  Íæ ‘”  Íç ‘”  Íè ‘”  Íé ‘”  Íê ‘”  Íë ‘”  Íì ‘”  Íí ‘”  Íî ‘”  Íï ‘”  Íğ ‘”  Íñ ‘”  Íò ‘”  Íó ‘”  Íô ‘”  Íõ ‘”  Íö ‘”  Í÷ ‘”  Íø ‘”  Íù ‘”  Íú ‘”  Íû ‘”  Íü ‘”  Íı ‘”  Íş ‘”  Íÿ ‘”  Í  ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í	 ‘”  Í
+ ‘”  Í ‘”  Í ‘”  Í ‘”  Í ÔrJ’§missing¦pluginÃ¦genAbcÂÔ  ÔrK”²dynamicImportCache¹exportAllDeclarationCache»exportNamedDeclarationCache«importCache‘ÔrL–¤type¥start£end«declarationªspecifiers¦source¶ExportNamedDeclarationÌ¬ÍaÔrM–¤type¥start£end¢idªsuperClass¤body°ClassDeclarationÌ³ÍaÔrN”¤type¥start£end¤nameªIdentifierÌ¹ÌÁ¨CartItemNªIdentifierÌÊÌÕ«ProductItemÔrO”¤type¥start£end¤body©ClassBodyÌÖÍa‘ÔrP˜¤type¥start£end¦static¨computed£key¤kind¥value°MethodDefinitionÌİÍ^ÂÂNªIdentifierÌİÌè«constructor«constructorÔrQ™¤type¥start£end¢idªexpression©generator¥async¦params¤body²FunctionExpressionÌèÍ^ÀÂÂÂ“NªIdentifierÌéÌğ§productNªIdentifierÌòÌø¦cartIdNªIdentifierÌúÌÿ¥countO®BlockStatementÍÍ^“ÔrR”¤type¥start£endªexpression³ExpressionStatementÍÍÔrS–¤type¥start£end¦callee©arguments¨optional®CallExpressionÍÍÔrT“¤type¥start£end¥SuperÍÍ‘NªIdentifierÍÍ§productÂR³ExpressionStatementÍ%Í:ÔrU–¤type¥start£end¨operator¤left¥right´AssignmentExpressionÍ%Í9¡=ÔrV—¤type¥start£end¦object¨property¨computed¨optional°MemberExpressionÍ%Í0T®ThisExpressionÍ%Í)NªIdentifierÍ*Í0¦cartIdÂÂNªIdentifierÍ3Í9¦cartIdR³ExpressionStatementÍDÍWU´AssignmentExpressionÍDÍV¡=V°MemberExpressionÍDÍNT®ThisExpressionÍDÍHNªIdentifierÍIÍN¥countÂÂNªIdentifierÍQÍV¥countÀ“ÔrW•¤type¥start£endªspecifiers¦source±ImportDeclaration 9‘ÔrX”¤type¥start£end¥local¶ImportDefaultSpecifierNªIdentifier¯relationalStoreÔrY•¤type¥start£end¥value£raw§Literal8º@ohos.data.relationalStore¼'@ohos.data.relationalStore'W±ImportDeclaration;Ìq‘X¶ImportDefaultSpecifierÌBÌMNªIdentifierÌBÌM«ProductItemY§LiteralÌSÌp»../../viewmodel/ProductItem½'../../viewmodel/ProductItem'W±ImportDeclarationÌsÌŸ‘ÔrZ•¤type¥start£end¨imported¥local¯ImportSpecifierÌ|Ì€NªIdentifierÌ|Ì€¤UserNªIdentifierÌ|Ì€¤UserY§LiteralÌˆÌ´../../viewmodel/User¶'../../viewmodel/User'

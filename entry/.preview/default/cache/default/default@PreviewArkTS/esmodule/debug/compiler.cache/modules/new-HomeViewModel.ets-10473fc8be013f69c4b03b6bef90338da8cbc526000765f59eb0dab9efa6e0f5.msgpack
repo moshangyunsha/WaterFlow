@@ -1,0 +1,424 @@
+Ôr@Ÿªassertions¤code´customTransformCache¬dependencies¢id¤meta±moduleSideEffects¬originalCode±originalSourcemap«resolvedIds®sourcemapChainµsyntheticNamedExportsµtransformDependencies®transformFiles¨cacheAstÔrAÚ!	// å®šä¹‰åˆ†ç±»å¸¸é‡ï¼Œä¾› UploadPage å’Œ HomePage ä½¿ç”¨
+export const CATEGORY_LIST = [
+    'å…¨éƒ¨',
+    'ç”µå­ç‰©å“',
+    'è¡£ç‰©é¦–é¥°',
+    'ç¾å¦†æŠ¤è‚¤',
+    'å›¾ä¹¦æ–‡å¨±',
+    'ç©å…·ä¹å™¨',
+    'è¿åŠ¨æˆ·å¤–'
+];
+/**
+ * é¦–é¡µåˆ†ç±»æ ‡é¢˜
+ */
+const classifyTitle = CATEGORY_LIST;
+/**
+ * é¦–é¡µè½®æ’­å›¾
+ */
+const swiperImage = [
+    { "id": 16777306, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+    { "id": 16777219, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+    { "id": 16777218, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }
+];
+/**
+ * é¦–é¡µç€‘å¸ƒæµæ•°æ® (å¸¦è¯¦ç»†ä»‹ç» + ç±»å‹ä¿®å¤)
+ */
+// âœ… å…³é”®ï¼šæŒ‡å®šç±»å‹ IProductItem[]ï¼Œè§£å†³ ArkTS æŠ¥é”™
+const waterFlowData = [
+    {
+        id: 1, merchantId: 1, width: 300, height: 400,
+        image_url: { "id": 16777305, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXX50E 5Gæ‰‹æœº',
+        discount: '',
+        price: 4088,
+        promotion: '',
+        bonus_points: '',
+        // âœ… æ‰¾å›äº†è¯¦ç»†ä»‹ç»
+        description: 'ã€è¶…é•¿ç»­èˆªã€‘XXX50E æ­è½½ 6000mAh å¤§ç”µæ± ï¼Œå‘Šåˆ«ç”µé‡ç„¦è™‘ã€‚é…å¤‡ 5000 ä¸‡åƒç´ è¶…æ¸…å½±åƒç³»ç»Ÿï¼Œè®°å½•ç”Ÿæ´»ç¾å¥½ç¬é—´ã€‚è½»è–„æœºèº«è®¾è®¡ï¼Œæ‰‹æ„Ÿèˆ’é€‚ã€‚',
+        detailImages: []
+    },
+    {
+        id: 2, merchantId: 1, width: 300, height: 350,
+        image_url: { "id": 16777302, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXXPadMate Xs 2 \n8GB+256GB ï¼ˆé›…é»‘ï¼‰',
+        discount: '',
+        price: 9999,
+        promotion: 'é™æ—¶',
+        bonus_points: '',
+        description: 'ã€æŠ˜å æ——èˆ°ã€‘è¶…è½»è–„æŠ˜å è®¾è®¡ï¼Œå±•å¼€å³æ˜¯æ²‰æµ¸å¤§å±ã€‚ç‹¬åˆ›åŒæ—‹é¹°ç¿¼é“°é“¾ï¼Œå±å¹•å¹³æ•´å¦‚é•œã€‚æ”¯æŒåŒ—æ–—å«æ˜Ÿæ¶ˆæ¯ï¼Œæ— åœ°é¢ç½‘ç»œä¹Ÿèƒ½å‘é€ä¿¡æ¯ã€‚',
+        detailImages: []
+    },
+    {
+        id: 3, merchantId: 2, width: 300, height: 420,
+        image_url: { "id": 16777298, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXé«˜æ€§èƒ½ç¬”è®°æœ¬ 16è‹±å¯¸',
+        discount: 'é™æ—¶çœ200',
+        price: 10099,
+        promotion: 'å•†å“',
+        bonus_points: '',
+        description: 'ã€ç”Ÿäº§åŠ›å·¥å…·ã€‘æ­è½½æœ€æ–°ä¸€ä»£é«˜æ€§èƒ½å¤„ç†å™¨ï¼Œ32GBå¤§å†…å­˜ï¼Œè½»æ¾è¿è¡Œå¤§å‹è½¯ä»¶ã€‚2.5Ké«˜åˆ†è¾¨ç‡å±å¹•ï¼Œè‰²å½©è¿˜åŸå‡†ç¡®ï¼Œè®¾è®¡å¸ˆçš„ä¸äºŒä¹‹é€‰ã€‚',
+        detailImages: []
+    },
+    {
+        id: 4, merchantId: 2, width: 300, height: 300,
+        image_url: { "id": 16777292, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'æ— çº¿é™éŸ³é¼ æ ‡ äºŒä»£',
+        discount: 'é™æ—¶çœ20',
+        price: 199,
+        promotion: '',
+        bonus_points: '',
+        description: 'ã€é™éŸ³åŠå…¬ã€‘äººä½“å·¥å­¦è®¾è®¡ï¼Œè´´åˆæ‰‹æŒæ›²çº¿ï¼Œä¹…ç”¨ä¸ç´¯ã€‚æŒ‰é”®é™éŸ³å¤„ç†ï¼Œå›¾ä¹¦é¦†ã€åŠå…¬å®¤ä½¿ç”¨ä¸æ‰“æ‰°ä»–äººã€‚æ”¯æŒè“ç‰™/2.4GåŒæ¨¡è¿æ¥ã€‚',
+        detailImages: []
+    },
+    {
+        id: 5, merchantId: 1, width: 300, height: 380,
+        image_url: { "id": 16777304, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXXPad Pro 11è‹±å¯¸',
+        discount: '',
+        price: 3499,
+        promotion: '',
+        bonus_points: '',
+        description: 'ã€åˆ›é€ åŠ›å¹³æ¿ã€‘120Hz é«˜åˆ·å…¨é¢å±ï¼Œæ­é…æ‰‹å†™ç¬”ï¼Œä¹¦å†™ä½“éªŒå¦‚çº¸èˆ¬æµç•…ã€‚å†…ç½®ä¸“ä¸šç¬”è®°è½¯ä»¶ï¼Œå­¦ä¹ åŠå…¬æ•ˆç‡å€å¢ã€‚',
+        detailImages: []
+    },
+    {
+        id: 6, merchantId: 1, width: 300, height: 400,
+        image_url: { "id": 16777303, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXXMate 50 8GB+256GB',
+        discount: '',
+        price: 5499,
+        promotion: '',
+        bonus_points: '',
+        description: 'ã€å½±åƒæ–°ç”Ÿã€‘XMAGE å½±åƒå“ç‰Œé¦–å‘ä¹‹ä½œï¼Œç‰©ç†å…‰åœˆåæ¡£å¯è°ƒï¼Œå¤œæ™¯æ‹æ‘„æ›´æ¸…æ™°ã€‚æ˜†ä»‘ç»ç’ƒé¢æ¿ï¼Œè€æ‘”èƒ½åŠ›æå‡10å€ã€‚',
+        detailImages: []
+    },
+    {
+        id: 7, merchantId: 1, width: 300, height: 450,
+        image_url: { "id": 16777221, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXX60 Pro é¥é¥é¢†å…ˆ',
+        discount: 'é™æ—¶çœ200',
+        price: 6999,
+        promotion: 'é™æ—¶',
+        bonus_points: '',
+        description: 'ã€å†ç»­ä¼ å¥‡ã€‘ç„æ­¦æ¶æ„ï¼Œè¶…å¯é æœºèº«ã€‚å«æ˜Ÿé€šè¯åŠŸèƒ½ï¼Œæ—¶åˆ»ä¿æŒè¿æ¥ã€‚é¸¿è’™æ“ä½œç³»ç»Ÿ4.0ï¼Œæµç•…ä½“éªŒå†å‡çº§ã€‚',
+        detailImages: []
+    },
+    // --- é‡å¤æ•°æ®ç”¨äºæ¼”ç¤ºæ»šåŠ¨æ•ˆæœ ---
+    {
+        id: 8, merchantId: 1, width: 300, height: 400,
+        image_url: { "id": 16777305, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXX50E (å¤‡ç”¨æœºæ¨è)',
+        discount: '',
+        price: 4088,
+        promotion: '',
+        bonus_points: '',
+        description: 'ä½œä¸ºä¸»åŠ›æœºçš„å®Œç¾æ­æ¡£ï¼Œè¶…é•¿å¾…æœºæ˜¯å®ƒçš„æ€æ‰‹é”ã€‚è€äººã€å­¦ç”Ÿä½¿ç”¨ä¹Ÿéå¸¸åˆé€‚ï¼Œç•Œé¢ç®€æ´å¤§å­—ä½“ã€‚',
+        detailImages: []
+    },
+    {
+        id: 9, merchantId: 1, width: 300, height: 350,
+        image_url: { "id": 16777302, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXXPadMate Xs 2 (é”¦ç™½)',
+        discount: 'é™æ—¶çœ200',
+        price: 9999,
+        promotion: 'é™æ—¶',
+        bonus_points: '',
+        description: 'ç™½è‰²ç‰ˆæœ¬æ›´åŠ ä¼˜é›…ï¼Œç‰¹æ®Šçš„ç«‹ä½“çš®çº¹å·¥è‰ºï¼Œæ‰‹æ„Ÿæ¸©æ¶¦ã€‚æŠ˜å æ— ç—•ï¼Œä½“éªŒæ— ç¼ã€‚',
+        detailImages: []
+    },
+    {
+        id: 10, merchantId: 2, width: 300, height: 420,
+        image_url: { "id": 16777298, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXæ¸¸æˆæœ¬ æ»¡è¡€ç‰ˆ',
+        discount: 'é™æ—¶çœ200',
+        price: 10099,
+        promotion: 'å•†å“',
+        bonus_points: '',
+        description: 'ä¸“ä¸ºç”µç«ç©å®¶æ‰“é€ ï¼Œç‹¬ç«‹æ˜¾å¡ç›´è¿ï¼Œå¸§ç‡ç¨³å®šã€‚RGBèƒŒå…‰é”®ç›˜ï¼Œæ°›å›´æ„Ÿæ‹‰æ»¡ã€‚',
+        detailImages: []
+    },
+    {
+        id: 11, merchantId: 2, width: 300, height: 300,
+        image_url: { "id": 16777292, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'é€ç»™äº²äºº å¿«é€Ÿè´­ä¹°ï¼',
+        discount: 'é™æ—¶çœ50',
+        price: 199,
+        promotion: 'é™æ—¶',
+        bonus_points: 'èµ é€ç§¯åˆ†',
+        description: 'ç¤¼ç›’åŒ…è£…ç‰ˆæœ¬ï¼Œé€äººæ›´æœ‰é¢å­ã€‚åŒ…å«å¤‡ç”¨ç”µæ± å’Œé¼ æ ‡å«ã€‚',
+        detailImages: []
+    },
+    {
+        id: 12, merchantId: 1, width: 300, height: 380,
+        image_url: { "id": 16777304, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXXPad Pro æ•™è‚²ä¼˜æƒ ç‰ˆ',
+        discount: 'é™æ—¶çœ200',
+        price: 3499,
+        promotion: '',
+        bonus_points: 'èµ é€ç§¯åˆ†',
+        description: 'å‡­å­¦ç”Ÿè¯å¯äº«å—æ•™è‚²ä¼˜æƒ ã€‚ä¸è®ºæ˜¯ä¸Šç½‘è¯¾è¿˜æ˜¯ç”»ç”»ï¼Œå®ƒéƒ½æ˜¯ä½ çš„å¥½å¸®æ‰‹ã€‚',
+        detailImages: []
+    },
+    {
+        id: 13, merchantId: 1, width: 300, height: 400,
+        image_url: { "id": 16777303, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXXMate 50 æ˜†ä»‘éœå…‰',
+        discount: '',
+        price: 5499,
+        promotion: '',
+        bonus_points: '',
+        description: 'ç´ çš®æè´¨ï¼Œæ©™è‰²å¤–è§‚å……æ»¡æ´»åŠ›ã€‚IP68çº§é˜²å°˜æŠ—æ°´ï¼Œæ— æƒ§é£é›¨ã€‚',
+        detailImages: []
+    },
+    {
+        id: 14, merchantId: 1, width: 300, height: 450,
+        image_url: { "id": 16777221, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+        name: 'XXX60 Pro (ç™½è‰²)',
+        discount: 'é™æ—¶çœ200',
+        price: 6999,
+        promotion: 'é™æ—¶',
+        bonus_points: '',
+        description: 'æ´›å¯å¯ç™½ï¼Œæ¯ä¸€å—èƒŒæ¿çš„çº¹ç†éƒ½ç‹¬ä¸€æ— äºŒã€‚',
+        detailImages: []
+    }
+];
+export { classifyTitle, swiperImage, waterFlowData };
+//# sourceMappingURL=HomeViewModel.js.mapÂÙOD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\HomeViewModel.etsÔrBœªmoduleName±isLocalDependency¯isNodeEntryFile§pkgPath±belongProjectPath§pkgNameªpkgVersion±dependencyPkgInfo¯hostModulesInfo°belongModulePath§checker¬shouldEmitJs¥entryÃÂÙ&D:\Dev_studio_Projicts\WaterFlow\entryÙ D:\Dev_studio_Projicts\WaterFlow¥entry¥1.0.0Ô  “ÔrC’²hostDependencyName®hostModuleNameº../viewmodel/HomeViewModel¥entryCº../viewmodel/HomeViewModel¥entryCº../viewmodel/HomeViewModel¥entryÙ&D:\Dev_studio_Projicts\WaterFlow\entryÔrDÜ ®¬getNodeCount²getIdentifierCount®getSymbolCount¬getTypeCountµgetInstantiationCountµgetRelationCacheSizes±isUndefinedSymbol±isArgumentsSymbol¯isUnknownSymbol¯getMergedSymbol®getDiagnostics´getGlobalDiagnostics´getRecursionIdentity¶getUnmatchedProperties¹getTypeOfSymbolAtLocation¯getTypeOfSymbolÙ(getSymbolsOfParameterPropertyDeclaration·getDeclaredTypeOfSymbol³getPropertiesOfType±getPropertyOfTypeÙ"getPrivateIdentifierPropertyOfType·getTypeOfPropertyOfType²getIndexInfoOfType³getIndexInfosOfTypeºgetIndexInfosOfIndexSymbol³getSignaturesOfType²getIndexTypeOfType¬getIndexType¬getBaseTypes¸getBaseTypeOfLiteralType®getWidenedType³getTypeFromTypeNode°getParameterTypeÙ$getParameterIdentifierNameAtPosition¸getPromisedTypeOfPromise®getAwaitedType¸getReturnTypeOfSignature®isNullableType¯getNullableType²getNonNullableType²getNonOptionalType°getTypeArguments®typeToTypeNodeÙ$indexInfoToIndexSignatureDeclaration¿signatureToSignatureDeclaration²symbolToEntityName²symbolToExpression¬symbolToNodeÙ!symbolToTypeParameterDeclarations¼symbolToParameterDeclarationºtypeParameterToDeclaration±getSymbolsInScope³getSymbolAtLocation·getIndexInfosAtLocationÙ!getShorthandAssignmentValueSymbolÙ#getExportSpecifierLocalTargetSymbol·getExportSymbolOfSymbol±getTypeAtLocationºgetTypeAtLocationForLinterÙ tryGetTypeAtLocationWithoutCheckºgetTypeOfAssignmentPatternÙ*getPropertySymbolOfDestructuringAssignment±signatureToString¬typeToString®symbolToStringµtypePredicateToString®writeSignature©writeType«writeSymbol²writeTypePredicate¼getAugmentedPropertiesOfType®getRootSymbols²getSymbolOfExpando±getContextualTypeÙ(getContextualTypeForObjectLiteralElementÙ#getContextualTypeForArgumentAtIndexÙ getContextualTypeForJsxAttribute²isContextSensitiveÙ!getTypeOfPropertyOfContextualTypeµgetFullyQualifiedNameÙ#tryGetResolvedSignatureWithoutCheck´getResolvedSignatureÙ/getResolvedSignatureForStringLiteralCompletionsÙ$getResolvedSignatureForSignatureHelpµgetExpandedParameters¹hasEffectiveRestParameterºcontainsArgumentsReference°getConstantValueµisValidPropertyAccessÙ#isValidPropertyAccessForCompletions»getSignatureFromDeclarationºisImplementationOfOverload¹getImmediateAliasedSymbol°getAliasedSymbol¯getEmitResolver²getExportsOfModule¿getExportsAndPropertiesOfModuleÙ forEachExportAndPropertyOfModule¯getSymbolWalker±getAmbientModules¹getJsxIntrinsicTagNamesAt³isOptionalParameter»tryGetMemberInModuleExportsÙ(tryGetMemberInModuleExportsAndProperties´tryFindAmbientModuleÙ(tryFindAmbientModuleWithoutAugmentations¯getApparentType¬getUnionType²isTypeAssignableTo³createAnonymousType¯createSignature¬createSymbol¯createIndexInfoªgetAnyType­getStringType­getNumberType±createPromiseType¯createArrayType¹getElementTypeOfArrayType®getBooleanType¬getFalseType«getTrueType«getVoidType°getUndefinedType«getNullType¯getESSymbolType¬getNeverType¯getOptionalType®getPromiseType²getPromiseLikeType´getAsyncIterableType²isSymbolAccessible«isArrayType«isTupleType¯isArrayLikeTypeÙ#isTypeInvalidDueToUnionDiscriminantºgetExactOptionalProperties¿getAllPossiblePropertiesOfTypesÙ(getSuggestedSymbolForNonexistentPropertyÙ#getSuggestionForNonexistentPropertyÙ,getSuggestedSymbolForNonexistentJSXAttributeÙ&getSuggestedSymbolForNonexistentSymbolÙ!getSuggestionForNonexistentSymbolÙ&getSuggestedSymbolForNonexistentModuleÙ!getSuggestionForNonexistentExportÙ+getSuggestedSymbolForNonexistentClassMember·getBaseConstraintOfType»getDefaultFromTypeParameter«resolveName¯getJsxNamespaceµgetJsxFragmentFactory¸getAccessibleSymbolChain»getTypePredicateOfSignature¹resolveExternalModuleName»resolveExternalModuleSymbol°tryGetThisTypeAt¹getTypeArgumentConstraint¸getSuggestionDiagnostics¸runWithCancellationTokenÙ3getLocalTypeParametersOfClassOrInterfaceOrTypeAlias´isDeclarationVisible´isPropertyAccessible»getTypeOnlyAliasDeclaration¿getMemberOverrideModifierStatusÙ!isTypeParameterPossiblyReferenced²getConstEnumRelate´clearConstEnumRelateµdeleteConstEnumRelateÙ$getTypeArgumentsForResolvedSignatureµgetCheckedSourceFilesÙ"collectHaveTsNoCheckFilesForLinter·clearQualifiedNameCache®isStaticRecord²isStaticSourceFileÔ  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  ÃÃÚ¶/*
+ * Copyright (c) 2023 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * ...
+ */
+
+import { IProductItem } from './ProductItem';
+
+// å®šä¹‰åˆ†ç±»å¸¸é‡ï¼Œä¾› UploadPage å’Œ HomePage ä½¿ç”¨
+export const CATEGORY_LIST: string[] = [
+  'å…¨éƒ¨', // ç´¢å¼• 0ï¼Œç”¨äºæŸ¥è¯¢æ‰€æœ‰
+  'ç”µå­ç‰©å“',
+  'è¡£ç‰©é¦–é¥°',
+  'ç¾å¦†æŠ¤è‚¤',
+  'å›¾ä¹¦æ–‡å¨±',
+  'ç©å…·ä¹å™¨',
+  'è¿åŠ¨æˆ·å¤–'
+];
+
+/**
+ * é¦–é¡µåˆ†ç±»æ ‡é¢˜
+ */
+const classifyTitle: string[] = CATEGORY_LIST;
+
+/**
+ * é¦–é¡µè½®æ’­å›¾
+ */
+const swiperImage: Resource[] = [
+  $r('app.media.ic_home_appliances_special'),
+  $r('app.media.ic_coupons'),
+  $r('app.media.ic_internal_purchase_price')
+];
+
+/**
+ * é¦–é¡µç€‘å¸ƒæµæ•°æ® (å¸¦è¯¦ç»†ä»‹ç» + ç±»å‹ä¿®å¤)
+ */
+// âœ… å…³é”®ï¼šæŒ‡å®šç±»å‹ IProductItem[]ï¼Œè§£å†³ ArkTS æŠ¥é”™
+const waterFlowData: IProductItem[] = [
+  {
+    id: 1, merchantId: 1, width: 300, height: 400,
+    image_url: $r('app.media.ic_holder_50e'),
+    name: 'XXX50E 5Gæ‰‹æœº',
+    discount: '',
+    price: 4088,
+    promotion: '',
+    bonus_points: '',
+    // âœ… æ‰¾å›äº†è¯¦ç»†ä»‹ç»
+    description: 'ã€è¶…é•¿ç»­èˆªã€‘XXX50E æ­è½½ 6000mAh å¤§ç”µæ± ï¼Œå‘Šåˆ«ç”µé‡ç„¦è™‘ã€‚é…å¤‡ 5000 ä¸‡åƒç´ è¶…æ¸…å½±åƒç³»ç»Ÿï¼Œè®°å½•ç”Ÿæ´»ç¾å¥½ç¬é—´ã€‚è½»è–„æœºèº«è®¾è®¡ï¼Œæ‰‹æ„Ÿèˆ’é€‚ã€‚',
+    detailImages: []
+  },
+  {
+    id: 2, merchantId: 1, width: 300, height: 350,
+    image_url: $r('app.media.ic_holder_xs2'),
+    name: 'XXXPadMate Xs 2 \n8GB+256GB ï¼ˆé›…é»‘ï¼‰',
+    discount: '',
+    price: 9999,
+    promotion: 'é™æ—¶',
+    bonus_points: '',
+    description: 'ã€æŠ˜å æ——èˆ°ã€‘è¶…è½»è–„æŠ˜å è®¾è®¡ï¼Œå±•å¼€å³æ˜¯æ²‰æµ¸å¤§å±ã€‚ç‹¬åˆ›åŒæ—‹é¹°ç¿¼é“°é“¾ï¼Œå±å¹•å¹³æ•´å¦‚é•œã€‚æ”¯æŒåŒ—æ–—å«æ˜Ÿæ¶ˆæ¯ï¼Œæ— åœ°é¢ç½‘ç»œä¹Ÿèƒ½å‘é€ä¿¡æ¯ã€‚',
+    detailImages: []
+  },
+  {
+    id: 3, merchantId: 2, width: 300, height: 420,
+    image_url: $r('app.media.ic_holder_computer'),
+    name: 'XXé«˜æ€§èƒ½ç¬”è®°æœ¬ 16è‹±å¯¸',
+    discount: 'é™æ—¶çœ200',
+    price: 10099,
+    promotion: 'å•†å“',
+    bonus_points: '',
+    description: 'ã€ç”Ÿäº§åŠ›å·¥å…·ã€‘æ­è½½æœ€æ–°ä¸€ä»£é«˜æ€§èƒ½å¤„ç†å™¨ï¼Œ32GBå¤§å†…å­˜ï¼Œè½»æ¾è¿è¡Œå¤§å‹è½¯ä»¶ã€‚2.5Ké«˜åˆ†è¾¨ç‡å±å¹•ï¼Œè‰²å½©è¿˜åŸå‡†ç¡®ï¼Œè®¾è®¡å¸ˆçš„ä¸äºŒä¹‹é€‰ã€‚',
+    detailImages: []
+  },
+  {
+    id: 4, merchantId: 2, width: 300, height: 300,
+    image_url: $r('app.media.ic_holder_mouse'),
+    name: 'æ— çº¿é™éŸ³é¼ æ ‡ äºŒä»£',
+    discount: 'é™æ—¶çœ20',
+    price: 199,
+    promotion: '',
+    bonus_points: '',
+    description: 'ã€é™éŸ³åŠå…¬ã€‘äººä½“å·¥å­¦è®¾è®¡ï¼Œè´´åˆæ‰‹æŒæ›²çº¿ï¼Œä¹…ç”¨ä¸ç´¯ã€‚æŒ‰é”®é™éŸ³å¤„ç†ï¼Œå›¾ä¹¦é¦†ã€åŠå…¬å®¤ä½¿ç”¨ä¸æ‰“æ‰°ä»–äººã€‚æ”¯æŒè“ç‰™/2.4GåŒæ¨¡è¿æ¥ã€‚',
+    detailImages: []
+  },
+  {
+    id: 5, merchantId: 1, width: 300, height: 380,
+    image_url: $r('app.media.ic_holder_pad'),
+    name: 'XXXPad Pro 11è‹±å¯¸',
+    discount: '',
+    price: 3499,
+    promotion: '',
+    bonus_points: '',
+    description: 'ã€åˆ›é€ åŠ›å¹³æ¿ã€‘120Hz é«˜åˆ·å…¨é¢å±ï¼Œæ­é…æ‰‹å†™ç¬”ï¼Œä¹¦å†™ä½“éªŒå¦‚çº¸èˆ¬æµç•…ã€‚å†…ç½®ä¸“ä¸šç¬”è®°è½¯ä»¶ï¼Œå­¦ä¹ åŠå…¬æ•ˆç‡å€å¢ã€‚',
+    detailImages: []
+  },
+  {
+    id: 6, merchantId: 1, width: 300, height: 400,
+    image_url: $r('app.media.ic_holder_mate50'),
+    name: 'XXXMate 50 8GB+256GB',
+    discount: '',
+    price: 5499,
+    promotion: '',
+    bonus_points: '',
+    description: 'ã€å½±åƒæ–°ç”Ÿã€‘XMAGE å½±åƒå“ç‰Œé¦–å‘ä¹‹ä½œï¼Œç‰©ç†å…‰åœˆåæ¡£å¯è°ƒï¼Œå¤œæ™¯æ‹æ‘„æ›´æ¸…æ™°ã€‚æ˜†ä»‘ç»ç’ƒé¢æ¿ï¼Œè€æ‘”èƒ½åŠ›æå‡10å€ã€‚',
+    detailImages: []
+  },
+  {
+    id: 7, merchantId: 1, width: 300, height: 450,
+    image_url: $r('app.media.ic_holder_60pro'),
+    name: 'XXX60 Pro é¥é¥é¢†å…ˆ',
+    discount: 'é™æ—¶çœ200',
+    price: 6999,
+    promotion: 'é™æ—¶',
+    bonus_points: '',
+    description: 'ã€å†ç»­ä¼ å¥‡ã€‘ç„æ­¦æ¶æ„ï¼Œè¶…å¯é æœºèº«ã€‚å«æ˜Ÿé€šè¯åŠŸèƒ½ï¼Œæ—¶åˆ»ä¿æŒè¿æ¥ã€‚é¸¿è’™æ“ä½œç³»ç»Ÿ4.0ï¼Œæµç•…ä½“éªŒå†å‡çº§ã€‚',
+    detailImages: []
+  },
+  // --- é‡å¤æ•°æ®ç”¨äºæ¼”ç¤ºæ»šåŠ¨æ•ˆæœ ---
+  {
+    id: 8, merchantId: 1, width: 300, height: 400,
+    image_url: $r('app.media.ic_holder_50e'),
+    name: 'XXX50E (å¤‡ç”¨æœºæ¨è)',
+    discount: '',
+    price: 4088,
+    promotion: '',
+    bonus_points: '',
+    description: 'ä½œä¸ºä¸»åŠ›æœºçš„å®Œç¾æ­æ¡£ï¼Œè¶…é•¿å¾…æœºæ˜¯å®ƒçš„æ€æ‰‹é”ã€‚è€äººã€å­¦ç”Ÿä½¿ç”¨ä¹Ÿéå¸¸åˆé€‚ï¼Œç•Œé¢ç®€æ´å¤§å­—ä½“ã€‚',
+    detailImages: []
+  },
+  {
+    id: 9, merchantId: 1, width: 300, height: 350,
+    image_url: $r('app.media.ic_holder_xs2'),
+    name: 'XXXPadMate Xs 2 (é”¦ç™½)',
+    discount: 'é™æ—¶çœ200',
+    price: 9999,
+    promotion: 'é™æ—¶',
+    bonus_points: '',
+    description: 'ç™½è‰²ç‰ˆæœ¬æ›´åŠ ä¼˜é›…ï¼Œç‰¹æ®Šçš„ç«‹ä½“çš®çº¹å·¥è‰ºï¼Œæ‰‹æ„Ÿæ¸©æ¶¦ã€‚æŠ˜å æ— ç—•ï¼Œä½“éªŒæ— ç¼ã€‚',
+    detailImages: []
+  },
+  {
+    id: 10, merchantId: 2, width: 300, height: 420,
+    image_url: $r('app.media.ic_holder_computer'),
+    name: 'XXæ¸¸æˆæœ¬ æ»¡è¡€ç‰ˆ',
+    discount: 'é™æ—¶çœ200',
+    price: 10099,
+    promotion: 'å•†å“',
+    bonus_points: '',
+    description: 'ä¸“ä¸ºç”µç«ç©å®¶æ‰“é€ ï¼Œç‹¬ç«‹æ˜¾å¡ç›´è¿ï¼Œå¸§ç‡ç¨³å®šã€‚RGBèƒŒå…‰é”®ç›˜ï¼Œæ°›å›´æ„Ÿæ‹‰æ»¡ã€‚',
+    detailImages: []
+  },
+  {
+    id: 11, merchantId: 2, width: 300, height: 300,
+    image_url: $r('app.media.ic_holder_mouse'),
+    name: 'é€ç»™äº²äºº å¿«é€Ÿè´­ä¹°ï¼',
+    discount: 'é™æ—¶çœ50',
+    price: 199,
+    promotion: 'é™æ—¶',
+    bonus_points: 'èµ é€ç§¯åˆ†',
+    description: 'ç¤¼ç›’åŒ…è£…ç‰ˆæœ¬ï¼Œé€äººæ›´æœ‰é¢å­ã€‚åŒ…å«å¤‡ç”¨ç”µæ± å’Œé¼ æ ‡å«ã€‚',
+    detailImages: []
+  },
+  {
+    id: 12, merchantId: 1, width: 300, height: 380,
+    image_url: $r('app.media.ic_holder_pad'),
+    name: 'XXXPad Pro æ•™è‚²ä¼˜æƒ ç‰ˆ',
+    discount: 'é™æ—¶çœ200',
+    price: 3499,
+    promotion: '',
+    bonus_points: 'èµ é€ç§¯åˆ†',
+    description: 'å‡­å­¦ç”Ÿè¯å¯äº«å—æ•™è‚²ä¼˜æƒ ã€‚ä¸è®ºæ˜¯ä¸Šç½‘è¯¾è¿˜æ˜¯ç”»ç”»ï¼Œå®ƒéƒ½æ˜¯ä½ çš„å¥½å¸®æ‰‹ã€‚',
+    detailImages: []
+  },
+  {
+    id: 13, merchantId: 1, width: 300, height: 400,
+    image_url: $r('app.media.ic_holder_mate50'),
+    name: 'XXXMate 50 æ˜†ä»‘éœå…‰',
+    discount: '',
+    price: 5499,
+    promotion: '',
+    bonus_points: '',
+    description: 'ç´ çš®æè´¨ï¼Œæ©™è‰²å¤–è§‚å……æ»¡æ´»åŠ›ã€‚IP68çº§é˜²å°˜æŠ—æ°´ï¼Œæ— æƒ§é£é›¨ã€‚',
+    detailImages: []
+  },
+  {
+    id: 14, merchantId: 1, width: 300, height: 450,
+    image_url: $r('app.media.ic_holder_60pro'),
+    name: 'XXX60 Pro (ç™½è‰²)',
+    discount: 'é™æ—¶çœ200',
+    price: 6999,
+    promotion: 'é™æ—¶',
+    bonus_points: '',
+    description: 'æ´›å¯å¯ç™½ï¼Œæ¯ä¸€å—èƒŒæ¿çš„çº¹ç†éƒ½ç‹¬ä¸€æ— äºŒã€‚',
+    detailImages: []
+  }
+];
+
+export { classifyTitle, swiperImage, waterFlowData };ÀA“ÔrE–§version¤fileªsourceRoot§sources¥names¨mappings°HomeViewModel.js ‘±HomeViewModel.etsÜ ¹’”   ”$ $–”  	 ” 	” 	” 	” 	” 	'’” 
+” 
+’” ”
+ ’” ”
+ ’” ”
+ ’” ”
+ ’” ”
+ ’” ”
+ ’” ” ‘”   ‘” –”   ” ” ”  ”# -”$ .‘”   ‘” ””   ” ” ”  ’” ” ‘”  ! ‘” #’”  $ ”' $'””  % ” %” %” %&‘” &Ü ” '”
+ '” '” '	” '” '” '” '” '”# '”% '!”( '$”* '&”0 ',”2 '.”5 '1“” (” (”Ì} (,”” )” )” )
+” )”” *” *” *” *”” +” +	” +” +”” ,” ,” ,” ,”” -” -” -” -’” .” .”” /” /” /”Ìa /Ì]”” 0” 0” 0” 0‘” 1‘” 2Ü ” 3”
+ 3” 3” 3	” 3” 3” 3” 3” 3”# 3”% 3!”( 3$”* 3&”0 3,”2 3.”5 31“” 4” 4”Ì} 4,”” 5” 5” 5
+”0 5,”” 6” 6” 6” 6”” 7” 7	” 7” 7”” 8” 8” 8” 8”” 9” 9” 9” 9”” :” :” :”ÌS :ÌO”” ;” ;” ;” ;‘” <‘” =Ü ” >”
+ >” >” >	” >” >” >” >” >”# >”% >!”( >$”* >&”0 >,”2 >.”5 >1“” ?” ?”Ì} ?1”” Ì@” Ì@” Ì@
+” Ì@”” ÌA” ÌA” ÌA” ÌA”” ÌB” ÌB	” ÌB” ÌB”” ÌC” ÌC” ÌC” ÌC”” ÌD” ÌD” ÌD” ÌD”” ÌE” ÌE” ÌE”ÌW ÌEÌS”” ÌF” ÌF” ÌF” ÌF‘” ÌG‘” ÌHÜ ” ÌI”
+ ÌI” ÌI” ÌI	” ÌI” ÌI” ÌI” ÌI” ÌI”# ÌI”% ÌI!”( ÌI$”* ÌI&”0 ÌI,”2 ÌI.”5 ÌI1“” ÌJ” ÌJ”Ì} ÌJ.”” ÌK” ÌK” ÌK
+” ÌK”” ÌL” ÌL” ÌL” ÌL”” ÌM” ÌM	” ÌM” ÌM”” ÌN” ÌN” ÌN” ÌN”” ÌO” ÌO” ÌO” ÌO”” ÌP” ÌP” ÌP”ÌT ÌPÌP”” ÌQ” ÌQ” ÌQ” ÌQ‘” ÌR‘” ÌSÜ ” ÌT”
+ ÌT” ÌT” ÌT	” ÌT” ÌT” ÌT” ÌT” ÌT”# ÌT”% ÌT!”( ÌT$”* ÌT&”0 ÌT,”2 ÌT.”5 ÌT1“” ÌU” ÌU”Ì} ÌU,”” ÌV” ÌV” ÌV
+” ÌV”” ÌW” ÌW” ÌW” ÌW”” ÌX” ÌX	” ÌX” ÌX”” ÌY” ÌY” ÌY” ÌY”” ÌZ” ÌZ” ÌZ” ÌZ”” Ì[” Ì[” Ì[”ÌL Ì[ÌH”” Ì\” Ì\” Ì\” Ì\‘” Ì]‘” Ì^Ü ” Ì_”
+ Ì_” Ì_” Ì_	” Ì_” Ì_” Ì_” Ì_” Ì_”# Ì_”% Ì_!”( Ì_$”* Ì_&”0 Ì_,”2 Ì_.”5 Ì_1“” Ì`” Ì`”Ì} Ì`/”” Ìa” Ìa” Ìa
+”$ Ìa ”” Ìb” Ìb” Ìb” Ìb”” Ìc” Ìc	” Ìc” Ìc”” Ìd” Ìd” Ìd” Ìd”” Ìe” Ìe” Ìe” Ìe”” Ìf” Ìf” Ìf”ÌN ÌfÌJ”” Ìg” Ìg” Ìg” Ìg‘” Ìh‘” ÌiÜ ” Ìj”
+ Ìj” Ìj” Ìj	” Ìj” Ìj” Ìj” Ìj” Ìj”# Ìj”% Ìj!”( Ìj$”* Ìj&”0 Ìj,”2 Ìj.”5 Ìj1“” Ìk” Ìk”Ì} Ìk.”” Ìl” Ìl” Ìl
+” Ìl”” Ìm” Ìm” Ìm” Ìm”” Ìn” Ìn	” Ìn” Ìn”” Ìo” Ìo” Ìo” Ìo”” Ìp” Ìp” Ìp” Ìp”” Ìq” Ìq” Ìq”ÌH ÌqÌD”” Ìr” Ìr” Ìr” Ìr‘” Ìs’” Ìt” Ìt‘” ÌuÜ ” Ìv”
+ Ìv” Ìv” Ìv	” Ìv” Ìv” Ìv” Ìv” Ìv”# Ìv”% Ìv!”( Ìv$”* Ìv&”0 Ìv,”2 Ìv.”5 Ìv1“” Ìw” Ìw”Ì} Ìw,”” Ìx” Ìx” Ìx
+” Ìx”” Ìy” Ìy” Ìy” Ìy”” Ìz” Ìz	” Ìz” Ìz”” Ì{” Ì{” Ì{” Ì{”” Ì|” Ì|” Ì|” Ì|”” Ì}” Ì}” Ì}”ÌB Ì}>”” Ì~” Ì~” Ì~” Ì~‘” Ì‘” Ì€Ü ” Ì”
+ Ì” Ì” Ì	” Ì” Ì” Ì” Ì” Ì”# Ì”% Ì!”( Ì$”* Ì&”0 Ì,”2 Ì.”5 Ì1“” Ì‚” Ì‚”Ì} Ì‚,”” Ìƒ” Ìƒ” Ìƒ
+”$ Ìƒ ”” Ì„” Ì„” Ì„” Ì„”” Ì…” Ì…	” Ì…” Ì…”” Ì†” Ì†” Ì†” Ì†”” Ì‡” Ì‡” Ì‡” Ì‡”” Ìˆ” Ìˆ” Ìˆ”9 Ìˆ5”” Ì‰” Ì‰” Ì‰” Ì‰‘” ÌŠ‘” Ì‹Ü ” ÌŒ”
+ ÌŒ” ÌŒ” ÌŒ
+” ÌŒ” ÌŒ” ÌŒ” ÌŒ” ÌŒ”$ ÌŒ ”& ÌŒ"”) ÌŒ%”+ ÌŒ'”1 ÌŒ-”3 ÌŒ/”6 ÌŒ2“” Ì” Ì”Ì} Ì1”” Ì” Ì” Ì
+” Ì”” Ì” Ì” Ì” Ì”” Ì” Ì	” Ì” Ì”” Ì‘” Ì‘” Ì‘” Ì‘”” Ì’” Ì’” Ì’” Ì’”” Ì“” Ì“” Ì“”: Ì“6”” Ì”” Ì”” Ì”” Ì”‘” Ì•‘” Ì–Ü ” Ì—”
+ Ì—” Ì—” Ì—
+” Ì—” Ì—” Ì—” Ì—” Ì—”$ Ì— ”& Ì—"”) Ì—%”+ Ì—'”1 Ì—-”3 Ì—/”6 Ì—2“” Ì˜” Ì˜”Ì} Ì˜.”” Ì™” Ì™” Ì™
+” Ì™”” Ìš” Ìš” Ìš” Ìš”” Ì›” Ì›	” Ì›” Ì›”” Ìœ” Ìœ” Ìœ” Ìœ”” Ì” Ì” Ì” Ì”” Ì” Ì” Ì”0 Ì,”” ÌŸ” ÌŸ” ÌŸ” ÌŸ‘” Ì ‘” Ì¡Ü ” Ì¢”
+ Ì¢” Ì¢” Ì¢
+” Ì¢” Ì¢” Ì¢” Ì¢” Ì¢”$ Ì¢ ”& Ì¢"”) Ì¢%”+ Ì¢'”1 Ì¢-”3 Ì¢/”6 Ì¢2“” Ì£” Ì£”Ì} Ì£,”” Ì¤” Ì¤” Ì¤
+”  Ì¤”” Ì¥” Ì¥” Ì¥” Ì¥”” Ì¦” Ì¦	” Ì¦” Ì¦”” Ì§” Ì§” Ì§” Ì§”” Ì¨” Ì¨” Ì¨” Ì¨”” Ì©” Ì©” Ì©”7 Ì©3”” Ìª” Ìª” Ìª” Ìª‘” Ì«‘” Ì¬Ü ” Ì­”
+ Ì­” Ì­” Ì­
+” Ì­” Ì­” Ì­” Ì­” Ì­”$ Ì­ ”& Ì­"”) Ì­%”+ Ì­'”1 Ì­-”3 Ì­/”6 Ì­2“” Ì®” Ì®”Ì} Ì®/”” Ì¯” Ì¯” Ì¯
+” Ì¯”” Ì°” Ì°” Ì°” Ì°”” Ì±” Ì±	” Ì±” Ì±”” Ì²” Ì²” Ì²” Ì²”” Ì³” Ì³” Ì³” Ì³”” Ì´” Ì´” Ì´”4 Ì´0”” Ìµ” Ìµ” Ìµ” Ìµ‘” Ì¶‘” Ì·Ü ” Ì¸”
+ Ì¸” Ì¸” Ì¸
+” Ì¸” Ì¸” Ì¸” Ì¸” Ì¸”$ Ì¸ ”& Ì¸"”) Ì¸%”+ Ì¸'”1 Ì¸-”3 Ì¸/”6 Ì¸2“” Ì¹” Ì¹”Ì} Ì¹.”” Ìº” Ìº” Ìº
+” Ìº”” Ì»” Ì»” Ì»” Ì»”” Ì¼” Ì¼	” Ì¼” Ì¼”” Ì½” Ì½” Ì½” Ì½”” Ì¾” Ì¾” Ì¾” Ì¾”” Ì¿” Ì¿” Ì¿”* Ì¿&”” ÌÀ” ÌÀ” ÌÀ” ÌÀ‘” ÌÁ’” ÌÂ” ÌÂš”  ÌÄ ” ÌÄ”	 ÌÄ	” ÌÄ” ÌÄ”# ÌÄ#”% ÌÄ%”2 ÌÄ2”4 ÌÄ4”5 ÌÄ5ÔrF–§version¤file§sources®sourcesContent¥names¨mappingsÀ‘À‘ÀÜ º‘”    ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”  	 ‘”  
+ ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”    ‘”  ! ‘”  " ‘”  # ‘”  $ ‘”  % ‘”  & ‘”  ' ‘”  ( ‘”  ) ‘”  * ‘”  + ‘”  , ‘”  - ‘”  . ‘”  / ‘”  0 ‘”  1 ‘”  2 ‘”  3 ‘”  4 ‘”  5 ‘”  6 ‘”  7 ‘”  8 ‘”  9 ‘”  : ‘”  ; ‘”  < ‘”  = ‘”  > ‘”  ? ‘”  Ì@ ‘”  ÌA ‘”  ÌB ‘”  ÌC ‘”  ÌD ‘”  ÌE ‘”  ÌF ‘”  ÌG ‘”  ÌH ‘”  ÌI ‘”  ÌJ ‘”  ÌK ‘”  ÌL ‘”  ÌM ‘”  ÌN ‘”  ÌO ‘”  ÌP ‘”  ÌQ ‘”  ÌR ‘”  ÌS ‘”  ÌT ‘”  ÌU ‘”  ÌV ‘”  ÌW ‘”  ÌX ‘”  ÌY ‘”  ÌZ ‘”  Ì[ ‘”  Ì\ ‘”  Ì] ‘”  Ì^ ‘”  Ì_ ‘”  Ì` ‘”  Ìa ‘”  Ìb ‘”  Ìc ‘”  Ìd ‘”  Ìe ‘”  Ìf ‘”  Ìg ‘”  Ìh ‘”  Ìi ‘”  Ìj ‘”  Ìk ‘”  Ìl ‘”  Ìm ‘”  Ìn ‘”  Ìo ‘”  Ìp ‘”  Ìq ‘”  Ìr ‘”  Ìs ‘”  Ìt ‘”  Ìu ‘”  Ìv ‘”  Ìw ‘”  Ìx ‘”  Ìy ‘”  Ìz ‘”  Ì{ ‘”  Ì| ‘”  Ì} ‘”  Ì~ ‘”  Ì ‘”  Ì€ ‘”  Ì ‘”  Ì‚ ‘”  Ìƒ ‘”  Ì„ ‘”  Ì… ‘”  Ì† ‘”  Ì‡ ‘”  Ìˆ ‘”  Ì‰ ‘”  ÌŠ ‘”  Ì‹ ‘”  ÌŒ ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì‘ ‘”  Ì’ ‘”  Ì“ ‘”  Ì” ‘”  Ì• ‘”  Ì– ‘”  Ì— ‘”  Ì˜ ‘”  Ì™ ‘”  Ìš ‘”  Ì› ‘”  Ìœ ‘”  Ì ‘”  Ì ‘”  ÌŸ ‘”  Ì  ‘”  Ì¡ ‘”  Ì¢ ‘”  Ì£ ‘”  Ì¤ ‘”  Ì¥ ‘”  Ì¦ ‘”  Ì§ ‘”  Ì¨ ‘”  Ì© ‘”  Ìª ‘”  Ì« ‘”  Ì¬ ‘”  Ì­ ‘”  Ì® ‘”  Ì¯ ‘”  Ì° ‘”  Ì± ‘”  Ì² ‘”  Ì³ ‘”  Ì´ ‘”  Ìµ ‘”  Ì¶ ‘”  Ì· ‘”  Ì¸ ‘”  Ì¹ ÔrG’§missing¦pluginÃ¦genAbcÂÔ  ÔrH”²dynamicImportCache¹exportAllDeclarationCache»exportNamedDeclarationCache«importCache’ÔrI–¤type¥start£end«declarationªspecifiers¦source¶ExportNamedDeclaration&Ì ÔrJ•¤type¥start£end¬declarations¤kind³VariableDeclaration-Ì ‘ÔrK•¤type¥start£end¢id¤init²VariableDeclarator3ÌŸÔrL”¤type¥start£end¤nameªIdentifier3Ì@­CATEGORY_LISTÔrM”¤type¥start£end¨elements¯ArrayExpressionÌCÌŸ—ÔrN•¤type¥start£end¥value£raw§LiteralÌJÌN¦å…¨éƒ¨¨'å…¨éƒ¨'N§LiteralÌUÌ[¬ç”µå­ç‰©å“®'ç”µå­ç‰©å“'N§LiteralÌbÌh¬è¡£ç‰©é¦–é¥°®'è¡£ç‰©é¦–é¥°'N§LiteralÌoÌu¬ç¾å¦†æŠ¤è‚¤®'ç¾å¦†æŠ¤è‚¤'N§LiteralÌ|Ì‚¬å›¾ä¹¦æ–‡å¨±®'å›¾ä¹¦æ–‡å¨±'N§LiteralÌ‰Ì¬ç©å…·ä¹å™¨®'ç©å…·ä¹å™¨'N§LiteralÌ–Ìœ¬è¿åŠ¨æˆ·å¤–®'è¿åŠ¨æˆ·å¤–'¥constÀI¶ExportNamedDeclarationÍ•ÍÊÀ“ÔrO•¤type¥start£end¥local¨exported¯ExportSpecifierÍÍ«LªIdentifierÍÍ«­classifyTitleLªIdentifierÍÍ«­classifyTitleO¯ExportSpecifierÍ­Í¸LªIdentifierÍ­Í¸«swiperImageLªIdentifierÍ­Í¸«swiperImageO¯ExportSpecifierÍºÍÇLªIdentifierÍºÍÇ­waterFlowDataLªIdentifierÍºÍÇ­waterFlowDataÀ
