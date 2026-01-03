@@ -8,6 +8,12 @@
     "pages/MerchantUploadPage",
     "pages/MerchantEditPage",
     "pages/OrderListPage",
-    "pages/MyFavoritesPage"
+    "pages/MyFavoritesPage",
+    "pages/AddressListPage",
+    "pages/AddressEditPage",
+    "pages/OrderConfirmPage",
+    "pages/MerChantShopPage",
+    "pages/ProductReviewsPage",
+    "pages/MerChantOrderPage"
   ]
 }

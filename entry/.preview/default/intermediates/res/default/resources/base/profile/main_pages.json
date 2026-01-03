@@ -1,1 +1,1 @@
-{"src":["pages/HomePage","pages/ProductDetailPage"]}
+{"src":["pages/LoginPage","pages/MainPage","pages/MerchantMainPage","pages/ProductDetailPage","pages/SearchResultPage","pages/MerchantUploadPage","pages/MerchantEditPage","pages/OrderListPage","pages/MyFavoritesPage"]}

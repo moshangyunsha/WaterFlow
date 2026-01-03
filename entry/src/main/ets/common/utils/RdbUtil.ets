@@ -3,6 +3,30 @@ import common from '@ohos.app.ability.common';
 import ProductItem from '../../viewmodel/ProductItem';
 import { User } from '../../viewmodel/User';
 
+// [新增] 评价数据接口
+export interface ReviewItem {
+  id: number;
+  orderId: number;
+  userId: number;
+  userName: string;   // 关联出来的用户名
+  userAvatar: string; // 关联出来的头像
+  rating: number;     // 1-5 星
+  content: string;
+  date: string;
+}
+
+export interface AddressItem {
+  id: number;
+  userId: number;
+  name: string;
+  phone: string;
+  address: string;     // 这里存 "广东省 深圳市 南山区 科技园路xxx号"
+  area: string;        // [新增] 存 "广东省 深圳市 南山区"
+  detail: string;      // [新增] 存 "科技园路xxx号"
+  tag: string;         // [新增] 标签：家/公司/学校
+  isDefault: boolean;
+}
+
 // [修改] 订单接口定义，增加 ID, 商家ID, 状态
 export interface OrderItem {
   id: number;           // 订单主键
@@ -69,6 +93,12 @@ class RdbUtil {
       // 5. 购物车表
       await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS CART (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, PRODUCT_ID INTEGER, COUNT INTEGER)`);
 
+      // 6.地址表
+      // [修改] 6. 地址表 - 增加 AREA(省市区), DETAIL(详细), TAG(标签)
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS ADDRESS (ID INTEGER PRIMARY KEY AUTOINCREMENT, USER_ID INTEGER, NAME TEXT, PHONE TEXT, AREA TEXT, DETAIL TEXT, ADDRESS TEXT, TAG TEXT, IS_DEFAULT INTEGER)`);
+      // [新增] 7. 评价表
+      // 字段: ID, 订单ID, 商品ID, 用户ID, 评分, 内容, 时间
+      await this.rdbStore.executeSql(`CREATE TABLE IF NOT EXISTS REVIEWS (ID INTEGER PRIMARY KEY AUTOINCREMENT, ORDER_ID INTEGER, PRODUCT_ID INTEGER, USER_ID INTEGER, RATING INTEGER, CONTENT TEXT, CREATE_TIME TEXT)`);
     } catch (err) {
       console.error(`RdbUtil initDB failed: ${JSON.stringify(err)}`);
     }
@@ -264,6 +294,43 @@ class RdbUtil {
     } catch (err) {
       this.rdbStore.rollBack();
       return -2;
+    }
+  }
+
+
+  // --- [新增] 单独更新用户余额 ---
+  async updateUserBalance(userId: number, newBalance: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      const value: relationalStore.ValuesBucket = { BALANCE: newBalance };
+      let predicates = new relationalStore.RdbPredicates("USER");
+      predicates.equalTo("ID", userId);
+      await this.rdbStore.update(value, predicates);
+      return true;
+    } catch (e) {
+      console.error(`Update balance failed: ${JSON.stringify(e)}`);
+      return false;
+    }
+  }
+
+  // --- [新增] 单独创建订单记录 ---
+  async addOrder(userId: number, merchantId: number, title: string, price: number, imgUrl: string): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      const orderVal: relationalStore.ValuesBucket = {
+        USER_ID: userId,
+        MERCHANT_ID: merchantId,
+        PRODUCT_NAME: title,
+        PRICE: price,
+        CREATE_TIME: new Date().toLocaleString(),
+        IMAGE_URL: imgUrl,
+        STATUS: 0 // 默认待发货
+      };
+      await this.rdbStore.insert("ORDERS", orderVal);
+      return true;
+    } catch (e) {
+      console.error(`Add order failed: ${JSON.stringify(e)}`);
+      return false;
     }
   }
 
@@ -497,5 +564,242 @@ class RdbUtil {
       return count > 0;
     } catch (e) { return false; }
   }
+
+  // --- 地址管理方法 ---
+
+  // 1. 获取地址列表 (默认地址排最前)
+  async getAddressList(userId: number): Promise<AddressItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("ADDRESS");
+      predicates.equalTo("USER_ID", userId);
+      predicates.orderByDesc("IS_DEFAULT").orderByDesc("ID"); // 默认的排第一个
+
+      let rs = await this.rdbStore.query(predicates);
+      let list: AddressItem[] = [];
+      while (rs.goToNextRow()) {
+        // 修改 while 循环内的 push 对象
+        list.push({
+          id: rs.getLong(rs.getColumnIndex("ID")),
+          userId: rs.getLong(rs.getColumnIndex("USER_ID")),
+          name: rs.getString(rs.getColumnIndex("NAME")),
+          phone: rs.getString(rs.getColumnIndex("PHONE")),
+          address: rs.getString(rs.getColumnIndex("ADDRESS")),
+          // [新增读取]
+          area: rs.getColumnIndex("AREA") >= 0 ? rs.getString(rs.getColumnIndex("AREA")) : "",
+          detail: rs.getColumnIndex("DETAIL") >= 0 ? rs.getString(rs.getColumnIndex("DETAIL")) : "",
+          tag: rs.getColumnIndex("TAG") >= 0 ? rs.getString(rs.getColumnIndex("TAG")) : "家",
+          isDefault: rs.getLong(rs.getColumnIndex("IS_DEFAULT")) === 1
+        });
+      }
+      rs.close();
+      return list;
+    } catch (e) { return []; }
+  }
+
+  // [修改] 接收更多参数
+  async addAddress(userId: number, name: string, phone: string, area: string, detail: string, tag: string, isDefault: boolean): Promise<boolean> {
+    if (!this.rdbStore) return false;
+
+    try {
+      // 1. 先查询（移到事务外面）
+      let currentList = await this.getAddressList(userId);
+
+      // 2. 开启事务
+      this.rdbStore.beginTransaction();
+
+      // 3. 逻辑判断
+      if (isDefault) {
+        // 如果用户选了默认，把其他的改成非默认
+        let val: relationalStore.ValuesBucket = { IS_DEFAULT: 0 };
+        let pred = new relationalStore.RdbPredicates("ADDRESS");
+        pred.equalTo("USER_ID", userId);
+        await this.rdbStore.update(val, pred);
+      } else {
+        // 如果列表为空，强制设为默认
+        if (currentList.length === 0) isDefault = true;
+      }
+
+      // 4. 插入新数据
+      const value: relationalStore.ValuesBucket = {
+        USER_ID: userId,
+        NAME: name,
+        PHONE: phone,
+        AREA: area,
+        DETAIL: detail,
+        ADDRESS: area + " " + detail,
+        TAG: tag,
+        IS_DEFAULT: isDefault ? 1 : 0
+      };
+      await this.rdbStore.insert("ADDRESS", value);
+
+      // 5. 提交
+      this.rdbStore.commit();
+      return true;
+    } catch (e) {
+      console.error(`Add Address Failed: ${JSON.stringify(e)}`); // 方便调试
+      this.rdbStore.rollBack();
+      return false;
+    }
+  }
+
+  // 3. 删除地址
+  async deleteAddress(addressId: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      let predicates = new relationalStore.RdbPredicates("ADDRESS");
+      predicates.equalTo("ID", addressId);
+      await this.rdbStore.delete(predicates);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // 4. 设为默认地址 (核心互斥逻辑)
+  async setAddressDefault(userId: number, addressId: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      this.rdbStore.beginTransaction();
+
+      // 全部置 0
+      let val0: relationalStore.ValuesBucket = { IS_DEFAULT: 0 };
+      let pred0 = new relationalStore.RdbPredicates("ADDRESS");
+      pred0.equalTo("USER_ID", userId);
+      await this.rdbStore.update(val0, pred0);
+
+      // 指定行置 1
+      let val1: relationalStore.ValuesBucket = { IS_DEFAULT: 1 };
+      let pred1 = new relationalStore.RdbPredicates("ADDRESS");
+      pred1.equalTo("ID", addressId);
+      await this.rdbStore.update(val1, pred1);
+
+      this.rdbStore.commit();
+      return true;
+    } catch (e) {
+      this.rdbStore.rollBack();
+      return false;
+    }
+  }
+
+  // --- [新增] 根据ID获取用户信息 (用于查询店铺信息) ---
+  async getUserById(userId: number): Promise<User | null> {
+    if (!this.rdbStore) return null;
+    try {
+      let predicates = new relationalStore.RdbPredicates("USER");
+      predicates.equalTo("ID", userId);
+      let rs = await this.rdbStore.query(predicates);
+
+      if (rs.goToFirstRow()) {
+        let avatar = "";
+        try { avatar = rs.getString(rs.getColumnIndex("AVATAR")); } catch(e) {}
+
+        let user = new User(
+          rs.getLong(rs.getColumnIndex("ID")),
+          rs.getString(rs.getColumnIndex("USERNAME")),
+          rs.getLong(rs.getColumnIndex("ROLE")),
+          rs.getDouble(rs.getColumnIndex("BALANCE")),
+          ""
+        );
+        user.token = avatar; // 借用 token 字段存头像，或者你在 User 类里加个 avatar 字段
+        rs.close();
+        return user;
+      }
+      rs.close();
+      return null;
+    } catch (err) { return null; }
+  }
+
+  // --- [新增] 评价系统方法 ---
+
+  // A. 发布评价
+  async addReview(orderId: number, productId: number, userId: number, rating: number, content: string): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      const value: relationalStore.ValuesBucket = {
+        ORDER_ID: orderId,
+        PRODUCT_ID: productId,
+        USER_ID: userId,
+        RATING: rating,
+        CONTENT: content,
+        CREATE_TIME: new Date().toLocaleDateString() // 简单存日期
+      };
+      await this.rdbStore.insert("REVIEWS", value);
+
+      // (可选) 评价完成后，可以将订单状态更新一下，或者仅仅作为已完成的附加动作
+      return true;
+    } catch (e) {
+      console.error(`Add Review Failed: ${JSON.stringify(e)}`);
+      return false;
+    }
+  }
+
+  // B. 获取某商品的评价列表
+  async getReviewsByProduct(productId: number): Promise<ReviewItem[]> {
+    if (!this.rdbStore) return [];
+    try {
+      let predicates = new relationalStore.RdbPredicates("REVIEWS");
+      predicates.equalTo("PRODUCT_ID", productId);
+      predicates.orderByDesc("ID"); // 新评价在前
+
+      let rs = await this.rdbStore.query(predicates);
+      let list: ReviewItem[] = [];
+
+      while (rs.goToNextRow()) {
+        let userId = rs.getLong(rs.getColumnIndex("USER_ID"));
+        // 查用户信息 (同步等待)
+        let user = await this.getUserById(userId);
+
+        list.push({
+          id: rs.getLong(rs.getColumnIndex("ID")),
+          orderId: rs.getLong(rs.getColumnIndex("ORDER_ID")),
+          userId: userId,
+          userName: user ? user.username : "匿名用户",
+          userAvatar: user ? user.token : "", // 借用token存头像
+          rating: rs.getLong(rs.getColumnIndex("RATING")),
+          content: rs.getString(rs.getColumnIndex("CONTENT")),
+          date: rs.getString(rs.getColumnIndex("CREATE_TIME"))
+        });
+      }
+      rs.close();
+      return list;
+    } catch (e) { return []; }
+  }
+
+  // C. 检查某个订单是否已经评价过 (防止重复评价)
+  async hasReviewed(orderId: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      let predicates = new relationalStore.RdbPredicates("REVIEWS");
+      predicates.equalTo("ORDER_ID", orderId);
+      let rs = await this.rdbStore.query(predicates);
+      let count = rs.rowCount;
+      rs.close();
+      return count > 0;
+    } catch (e) { return false; }
+  }
+
+  // [新增] 检查是否已收藏
+  async hasFavorite(userId: number, productId: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      let predicates = new relationalStore.RdbPredicates("FAVORITE");
+      predicates.equalTo("USER_ID", userId).equalTo("PRODUCT_ID", productId);
+      let rs = await this.rdbStore.query(predicates);
+      let count = rs.rowCount;
+      rs.close();
+      return count > 0;
+    } catch (e) { return false; }
+  }
+
+  // [新增] 取消收藏
+  async removeFavorite(userId: number, productId: number): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    try {
+      let predicates = new relationalStore.RdbPredicates("FAVORITE");
+      predicates.equalTo("USER_ID", userId).equalTo("PRODUCT_ID", productId);
+      await this.rdbStore.delete(predicates);
+      return true;
+    } catch (e) { return false; }
+  }
+
 }
 export default RdbUtil.getInstance();

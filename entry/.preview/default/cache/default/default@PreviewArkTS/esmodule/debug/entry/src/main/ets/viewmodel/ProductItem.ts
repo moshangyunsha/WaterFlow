@@ -1,59 +1,52 @@
-/*
- * Copyright (c) 2023 Huawei Device Co., Ltd.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/**
+ * 统一商品接口定义
  */
 export interface IProductItem {
-    /**
-     * Product image url.
-     */
+    id: number;
+    merchantId: number;
     image_url: ResourceStr;
-    /**
-     * Product name.
-     */
+    width: number;
+    height: number;
     name: string;
-    /**
-     * Product discount.
-     */
-    discount: string;
-    /**
-     * Product price.
-     */
-    price: string;
-    /**
-     * Product promotion.
-     */
-    promotion: string;
-    /**
-     * Product bonus points.
-     */
-    bonus_points: string;
+    price: number; // 注意：这里是 number
+    // 新增分类字段
+    category?: string;
+    discount?: string;
+    promotion?: string;
+    bonus_points?: string;
+    description?: string;
+    detailImages?: ResourceStr[];
 }
-/**
- * Water flow item.
- */
+@Observed
 export default class ProductItem implements IProductItem {
+    id: number;
+    merchantId: number;
     image_url: ResourceStr;
+    width: number;
+    height: number;
     name: string;
+    price: number;
+    // 新增分类字段
+    category?: string;
     discount: string;
-    price: string;
     promotion: string;
     bonus_points: string;
+    description: string;
+    detailImages: ResourceStr[];
     constructor(props: IProductItem) {
+        this.id = props.id;
+        this.merchantId = props.merchantId;
         this.image_url = props.image_url;
+        this.width = props.width;
+        this.height = props.height;
         this.name = props.name;
-        this.discount = props.discount;
         this.price = props.price;
-        this.promotion = props.promotion;
-        this.bonus_points = props.bonus_points;
+        //  初始化分类，默认为'电子物品'防止空指针
+        this.category = props.category || '电子物品';
+        this.discount = props.discount || '';
+        this.promotion = props.promotion || '';
+        this.bonus_points = props.bonus_points || '';
+        this.description = props.description || '暂无详细介绍';
+        this.detailImages = props.detailImages || [];
     }
 }

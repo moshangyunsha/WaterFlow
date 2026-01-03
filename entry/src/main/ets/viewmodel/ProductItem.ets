@@ -18,6 +18,9 @@ export interface IProductItem {
   bonus_points?: string;
   description?: string;
   detailImages?: ResourceStr[];
+  // [新增] 数量字段 (可选)
+  count?: number;
+  cartId?: number;
 }
 
 @Observed
@@ -38,6 +41,9 @@ export default class ProductItem implements IProductItem {
   bonus_points: string;
   description: string;
   detailImages: ResourceStr[];
+  // [新增] 数量字段
+  count: number;
+  cartId?: number;
 
   constructor(props: IProductItem) {
     this.id = props.id;
@@ -56,5 +62,8 @@ export default class ProductItem implements IProductItem {
     this.bonus_points = props.bonus_points || '';
     this.description = props.description || '暂无详细介绍';
     this.detailImages = props.detailImages || [];
+    // [新增] 初始化 count，默认为 0
+    this.count = props.count || 0;
+    this.cartId = props.cartId;
   }
 }

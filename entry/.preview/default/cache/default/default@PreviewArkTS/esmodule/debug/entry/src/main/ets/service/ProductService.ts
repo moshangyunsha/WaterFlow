@@ -1,15 +1,8 @@
-import relationalStore from "@ohos:data.relationalStore";
-import type common from "@ohos:app.ability.common";
-import ProductItem from "@bundle:com.huawei.waterflow/entry/ets/viewmodel/ProductItem";
-export interface RawProductData {
-    name: string;
-    price: string;
-    imageKey: string;
-    discount: string;
-    promotion: string;
-    bonus_points: string;
-}
-const LOCAL_IMAGES: Record<string, Resource> = {
+import RdbUtil from "@bundle:com.huawei.waterflow/entry/ets/common/utils/RdbUtil";
+import type { CartItem } from "@bundle:com.huawei.waterflow/entry/ets/common/utils/RdbUtil";
+import type ProductItem from '../viewmodel/ProductItem';
+import { MOCK_PRODUCTS } from "@bundle:com.huawei.waterflow/entry/ets/viewmodel/MockData";
+const LOCAL_IMAGES_MAP: Record<string, Resource> = {
     'ic_holder_50e': { "id": 16777305, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
     'ic_holder_xs2': { "id": 16777302, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
     'ic_holder_computer': { "id": 16777298, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
@@ -20,12 +13,17 @@ const LOCAL_IMAGES: Record<string, Resource> = {
     'loading': { "id": 16777293, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
     'ic_app_background': { "id": 16777295, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }
 };
-const SQL_CREATE_TABLE = `CREATE TABLE IF NOT EXISTS PRODUCT (ID INTEGER PRIMARY KEY AUTOINCREMENT, NAME TEXT, PRICE TEXT, IMAGE_KEY TEXT, DISCOUNT TEXT, PROMOTION TEXT, BONUS_POINTS TEXT)`;
-const STORE_CONFIG: relationalStore.StoreConfig = { name: 'Shop.db', securityLevel: relationalStore.SecurityLevel.S1 };
+// [新增] 定义一个辅助类，解决 "Object literal must correspond to..." 报错
+class MerchantConfig {
+    user: string;
+    pass: string;
+    constructor(user: string, pass: string) {
+        this.user = user;
+        this.pass = pass;
+    }
+}
 class ProductService {
     private static instance: ProductService;
-    private rdbStore: relationalStore.RdbStore | null = null;
-    private readonly TABLE_NAME = 'PRODUCT';
     private constructor() { }
     public static getInstance(): ProductService {
         if (!ProductService.instance) {
@@ -33,74 +31,114 @@ class ProductService {
         }
         return ProductService.instance;
     }
-    public async initDB(context: common.UIAbilityContext): Promise<void> {
-        try {
-            this.rdbStore = await relationalStore.getRdbStore(context, STORE_CONFIG);
-            await this.rdbStore.executeSql(SQL_CREATE_TABLE);
+    // 公开的图片解析方法
+    public resolveImage(key: string): Resource {
+        if (LOCAL_IMAGES_MAP[key]) {
+            return LOCAL_IMAGES_MAP[key];
         }
-        catch (err) { }
+        return { "id": 16777298, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }; // 默认兜底
     }
-    public async saveInitialData(rawData: RawProductData[]): Promise<void> {
-        if (!this.rdbStore)
-            return;
-        try {
-            let predicates = new relationalStore.RdbPredicates(this.TABLE_NAME);
-            let resultSet = await this.rdbStore.query(predicates);
-            if (resultSet.rowCount > 0) {
-                resultSet.close();
-                return;
+    // 图片映射处理: 将数据库里的 String Key 转换为 Resource 对象
+    private mapProductList(rawList: ProductItem[]): ProductItem[] {
+        return rawList.map((item: ProductItem) => {
+            const imgStr = item.image_url as string;
+            if (LOCAL_IMAGES_MAP[imgStr]) {
+                item.image_url = LOCAL_IMAGES_MAP[imgStr];
             }
-            resultSet.close();
-            this.rdbStore.beginTransaction();
-            for (const item of rawData) {
-                const valueBucket: relationalStore.ValuesBucket = { 'NAME': item.name, 'PRICE': item.price, 'IMAGE_KEY': item.imageKey, 'DISCOUNT': item.discount, 'PROMOTION': item.promotion, 'BONUS_POINTS': item.bonus_points };
-                await this.rdbStore.insert(this.TABLE_NAME, valueBucket);
+            return item;
+        });
+    }
+    // [核心修改] 初始化数据：创建3个默认商家并分配商品
+    public async initData(): Promise<void> {
+        const isEmpty = await RdbUtil.isProductEmpty();
+        if (isEmpty) {
+            console.info('ProductService: Start initializing Data...');
+            // [修改] 使用类实例数组，解决 ArkTS 类型推断报错
+            const merchantAccounts: MerchantConfig[] = [
+                new MerchantConfig('testMall1', 'Mall1'),
+                new MerchantConfig('testMall2', 'Mall2'),
+                new MerchantConfig('testMall3', 'Mall3')
+            ];
+            const merchantIds: number[] = [];
+            // 2. 确保这三个商家存在，并获取他们的 ID
+            for (const acc of merchantAccounts) {
+                // 尝试登录获取 ID
+                let user = await RdbUtil.login(acc.user, acc.pass);
+                // 如果不存在，则注册 (Role=1 代表商家)
+                if (!user) {
+                    user = await RdbUtil.register(acc.user, acc.pass, 1);
+                }
+                if (user) {
+                    merchantIds.push(user.id);
+                    console.info(`ProductService: Ensure merchant ${acc.user} exists, ID=${user.id}`);
+                }
             }
-            this.rdbStore.commit();
-        }
-        catch (e) {
-            if (this.rdbStore)
-                this.rdbStore.rollBack();
+            // 如果商家创建失败（极端情况），兜底使用 ID 0
+            if (merchantIds.length === 0)
+                merchantIds.push(0);
+            // 3. 插入商品，并循环分配给这几个商家
+            console.info('ProductService: Start inserting Mock Products...');
+            for (let i = 0; i < MOCK_PRODUCTS.length; i++) {
+                const item = MOCK_PRODUCTS[i];
+                // 解析价格
+                let priceNum = 0;
+                try {
+                    if (item.price) {
+                        const numStr = item.price.replace(/[^\d.]/g, '');
+                        priceNum = parseFloat(numStr);
+                    }
+                }
+                catch (error) {
+                    priceNum = 0;
+                }
+                if (isNaN(priceNum))
+                    priceNum = 0;
+                // [关键] 轮询分配商家ID (取模运算)
+                const assignedMerchantId = merchantIds[i % merchantIds.length];
+                await RdbUtil.addProduct(assignedMerchantId, // 传入分配的商家ID
+                item.name, priceNum, item.imageKey, 300, 300 + Math.random() * 200, item.description, item.category || '电子物品');
+            }
+            console.info('ProductService: Mock Data inserted with merchant allocation.');
         }
     }
+    // 获取所有商品 (首页)
     public async getAllProducts(): Promise<ProductItem[]> {
-        if (!this.rdbStore)
-            return [];
-        let predicates = new relationalStore.RdbPredicates(this.TABLE_NAME);
-        let resultSet = await this.rdbStore.query(predicates);
-        return this.processResultSet(resultSet);
+        const rawList = await RdbUtil.getAllProducts();
+        return this.mapProductList(rawList);
     }
+    // 搜索商品
     public async searchProducts(keyword: string): Promise<ProductItem[]> {
-        if (!this.rdbStore)
-            return [];
-        let predicates = new relationalStore.RdbPredicates(this.TABLE_NAME);
-        if (keyword?.trim()) {
-            predicates.contains('NAME', keyword);
+        if (!keyword || keyword.trim() === '') {
+            return this.getAllProducts();
         }
-        let resultSet = await this.rdbStore.query(predicates);
-        return this.processResultSet(resultSet);
+        const rawList = await RdbUtil.searchProducts(keyword);
+        return this.mapProductList(rawList);
     }
-    private processResultSet(resultSet: relationalStore.ResultSet): ProductItem[] {
-        let list: ProductItem[] = [];
-        if (resultSet.rowCount > 0) {
-            while (resultSet.goToNextRow()) {
-                list.push(this.convert(resultSet));
-            }
+    // 获取收藏 (收藏页)
+    public async getMyFavorites(userId: number): Promise<ProductItem[]> {
+        const rawList = await RdbUtil.getMyFavorites(userId);
+        return this.mapProductList(rawList);
+    }
+    // 重置数据
+    public async clearAllData(): Promise<void> {
+        await RdbUtil.resetDatabase();
+        await this.initData();
+    }
+    // 按分类查询
+    public async getProductsByCategory(category: string): Promise<ProductItem[]> {
+        if (!category || category === '全部') {
+            return this.getAllProducts();
         }
-        resultSet.close();
-        return list;
+        const rawList = await RdbUtil.getProductsByCategory(category);
+        return this.mapProductList(rawList);
     }
-    private convert(resultSet: relationalStore.ResultSet): ProductItem {
-        const key = resultSet.getString(resultSet.getColumnIndex('IMAGE_KEY'));
-        // 优先从本地Map找，找不到就直接返回Key（作为URL）
-        const imageSrc = LOCAL_IMAGES[key] ? LOCAL_IMAGES[key] : key;
-        return new ProductItem({
-            name: resultSet.getString(resultSet.getColumnIndex('NAME')),
-            price: resultSet.getString(resultSet.getColumnIndex('PRICE')),
-            image_url: imageSrc,
-            discount: resultSet.getString(resultSet.getColumnIndex('DISCOUNT')),
-            promotion: resultSet.getString(resultSet.getColumnIndex('PROMOTION')),
-            bonus_points: resultSet.getString(resultSet.getColumnIndex('BONUS_POINTS'))
+    // 获取购物车列表
+    public async getCartList(userId: number): Promise<CartItem[]> {
+        const rawList: CartItem[] = await RdbUtil.getCartList(userId);
+        return rawList.map((item: CartItem) => {
+            const imgKey = item.image_url as string;
+            item.image_url = this.resolveImage(imgKey);
+            return item;
         });
     }
 }

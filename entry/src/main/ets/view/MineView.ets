@@ -82,6 +82,11 @@ export struct MineView { // [修改] 导出名 MineView
                 router.pushUrl({ url: 'pages/MyFavoritesPage' })
               })
             }
+            ListItem() {
+              this.MenuCell("商品管理", () => {
+                router.pushUrl({ url: 'pages/MerchantMainPage' })
+              })
+            }
           } else {
             // --- 买家菜单 ---
             ListItem() {
@@ -92,6 +97,12 @@ export struct MineView { // [修改] 导出名 MineView
             ListItem() {
               this.MenuCell("我的订单", () => {
                 router.pushUrl({ url: 'pages/OrderListPage' })
+              })
+            }
+            // 在 "我的订单" 下面添加
+            ListItem() {
+              this.MenuCell("地址管理", () => {
+                router.pushUrl({ url: 'pages/AddressListPage' })
               })
             }
           }

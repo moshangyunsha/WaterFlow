@@ -6,7 +6,7 @@ import WaterFlowComponent from './WaterFlowComponent';
 import router from '@ohos.router';
 import ProductService from '../service/ProductService';
 import ProductItem from '../viewmodel/ProductItem';
-
+//(首页模块)
 // [修改] 移除 @Entry，改为 @Component 并 export
 @Component
 export struct HomeView {
