@@ -1,39 +1,35 @@
 import UIAbility from "@ohos:app.ability.UIAbility";
 import window from "@ohos:window";
-import type { BusinessError as BusinessError } from "@ohos:base";
 import Logger from "@bundle:com.huawei.waterflow/entry/ets/common/utils/Logger";
-/**
- * Lift cycle management of Ability.
- */
+import RdbUtil from "@bundle:com.huawei.waterflow/entry/ets/common/utils/RdbUtil";
 export default class EntryAbility extends UIAbility {
-    onWindowStageCreate(windowStage: window.WindowStage): void {
-        // Main window is created, set main page for this ability
-        windowStage.loadContent('pages/HomePage', (err, data) => {
+    async onWindowStageCreate(windowStage: window.WindowStage): Promise<void> {
+        // 【核心】必须死等数据库初始化完成
+        console.info('EntryAbility: Start initializing DB...');
+        try {
+            await RdbUtil.initDB(this.context);
+            console.info('EntryAbility: DB Initialized successfully.');
+        }
+        catch (e) {
+            console.error(`EntryAbility: DB Init FAILED: ${JSON.stringify(e)}`);
+        }
+        windowStage.loadContent('pages/LoginPage', (err, data) => {
             if (err.code) {
-                Logger.error('Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
+                Logger.error('Failed to load content', JSON.stringify(err));
                 return;
             }
-            Logger.info('Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '');
+            // 沉浸式导航栏设置
             try {
                 let windowClass: window.Window = windowStage.getMainWindowSync();
-                let isLayoutFullScreen = true;
-                windowClass.setWindowLayoutFullScreen(isLayoutFullScreen).then(() => {
-                    Logger.info('EntryAbility', 'Succeeded in setting the window layout to full-screen mode.');
-                }).catch((err: BusinessError) => {
-                    Logger.error('EntryAbility', `Failed to set the window layout to full-screen mode. Code is ${err.code}, message is ${err.message}`);
-                });
+                windowClass.setWindowLayoutFullScreen(true);
                 let type = window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR;
                 let avoidArea = windowClass.getWindowAvoidArea(type);
-                let bottomRectHeight = avoidArea.bottomRect.height;
-                AppStorage.setOrCreate('bottomRectHeight', bottomRectHeight);
+                AppStorage.setOrCreate('bottomRectHeight', avoidArea.bottomRect.height);
                 type = window.AvoidAreaType.TYPE_SYSTEM;
                 avoidArea = windowClass.getWindowAvoidArea(type);
-                let topRectHeight = avoidArea.topRect.height;
-                AppStorage.setOrCreate('topRectHeight', topRectHeight);
+                AppStorage.setOrCreate('topRectHeight', avoidArea.topRect.height);
             }
-            catch (error) {
-                Logger.error('EntryAbility', `Failed to set the window layout to full-screen mode. Code is ${err.code}, message is ${err.message}`);
-            }
+            catch (error) { }
         });
     }
 }

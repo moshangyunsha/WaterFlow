@@ -3,16 +3,13 @@ if (!("finalizeConstruction" in ViewPU.prototype)) {
 }
 interface WaterFlowComponent_Params {
     bottomRectHeight?: number;
-    datasource?: WaterFlowDataSource;
-    isDataLoaded?: boolean;
+    productList?: ProductItem[];
+    dataSource?: WaterFlowDataSource;
 }
 import type ProductItem from '../viewmodel/ProductItem';
+import FlowItemComponent from "@bundle:com.huawei.waterflow/entry/ets/view/FlowItemComponent";
 import { WaterFlowDataSource } from "@bundle:com.huawei.waterflow/entry/ets/viewmodel/WaterFlowDataSource";
 import { CommonConstants as Const } from "@bundle:com.huawei.waterflow/entry/ets/common/constants/CommonConstants";
-import FlowItemComponent from "@bundle:com.huawei.waterflow/entry/ets/view/FlowItemComponent";
-import type common from "@ohos:app.ability.common";
-import ProductService from "@bundle:com.huawei.waterflow/entry/ets/service/ProductService";
-import { MOCK_PRODUCTS } from "@bundle:com.huawei.waterflow/entry/ets/viewmodel/MockData";
 export default class WaterFlowComponent extends ViewPU {
     constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
         super(parent, __localStorage, elmtId, extraInfo);
@@ -20,28 +17,27 @@ export default class WaterFlowComponent extends ViewPU {
             this.paramsGenerator_ = paramsLambda;
         }
         this.__bottomRectHeight = this.createStorageLink('bottomRectHeight', 0, "bottomRectHeight");
-        this.datasource = new WaterFlowDataSource();
-        this.__isDataLoaded = new ObservedPropertySimplePU(false, this, "isDataLoaded");
+        this.__productList = new SynchedPropertyObjectOneWayPU(params.productList, this, "productList");
+        this.dataSource = new WaterFlowDataSource();
         this.setInitiallyProvidedValue(params);
+        this.declareWatch("productList", this.onListChange);
         this.finalizeConstruction();
     }
     setInitiallyProvidedValue(params: WaterFlowComponent_Params) {
-        if (params.datasource !== undefined) {
-            this.datasource = params.datasource;
-        }
-        if (params.isDataLoaded !== undefined) {
-            this.isDataLoaded = params.isDataLoaded;
+        if (params.dataSource !== undefined) {
+            this.dataSource = params.dataSource;
         }
     }
     updateStateVars(params: WaterFlowComponent_Params) {
+        this.__productList.reset(params.productList);
     }
     purgeVariableDependenciesOnElmtId(rmElmtId) {
         this.__bottomRectHeight.purgeDependencyOnElmtId(rmElmtId);
-        this.__isDataLoaded.purgeDependencyOnElmtId(rmElmtId);
+        this.__productList.purgeDependencyOnElmtId(rmElmtId);
     }
     aboutToBeDeleted() {
         this.__bottomRectHeight.aboutToBeDeleted();
-        this.__isDataLoaded.aboutToBeDeleted();
+        this.__productList.aboutToBeDeleted();
         SubscriberManager.Get().delete(this.id__());
         this.aboutToBeDeletedInternal();
     }
@@ -52,42 +48,41 @@ export default class WaterFlowComponent extends ViewPU {
     set bottomRectHeight(newValue: number) {
         this.__bottomRectHeight.set(newValue);
     }
-    private datasource: WaterFlowDataSource;
-    private __isDataLoaded: ObservedPropertySimplePU<boolean>;
-    get isDataLoaded() {
-        return this.__isDataLoaded.get();
+    private __productList: SynchedPropertySimpleOneWayPU<ProductItem[]>;
+    get productList() {
+        return this.__productList.get();
     }
-    set isDataLoaded(newValue: boolean) {
-        this.__isDataLoaded.set(newValue);
+    set productList(newValue: ProductItem[]) {
+        this.__productList.set(newValue);
     }
-    async aboutToAppear() {
-        let context = getContext(this) as common.UIAbilityContext;
-        await ProductService.initDB(context);
-        await ProductService.saveInitialData(MOCK_PRODUCTS);
-        const products = await ProductService.getAllProducts();
-        this.datasource.setDataArray(products);
-        this.isDataLoaded = true;
+    private dataSource: WaterFlowDataSource;
+    onListChange() {
+        this.dataSource.setDataArray(this.productList);
+        this.dataSource.notifyDataReload();
+    }
+    aboutToAppear() {
+        this.dataSource.setDataArray(this.productList);
     }
     initialRender() {
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Column.create();
-            Column.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(25:5)", "entry");
+            Column.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(23:5)", "entry");
         }, Column);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             If.create();
-            if (!this.isDataLoaded) {
+            if (this.productList.length === 0) {
                 this.ifElseBranchUpdateFunction(0, () => {
                     this.observeComponentCreation2((elmtId, isInitialRender) => {
                         Column.create();
-                        Column.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(27:9)", "entry");
+                        Column.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(25:9)", "entry");
                         Column.width('100%');
-                        Column.height('100%');
                         Column.justifyContent(FlexAlign.Center);
                     }, Column);
                     this.observeComponentCreation2((elmtId, isInitialRender) => {
-                        Text.create("数据加载中...");
-                        Text.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(27:20)", "entry");
+                        Text.create("暂无数据");
+                        Text.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(26:11)", "entry");
                         Text.fontColor(Color.Gray);
+                        Text.margin({ top: 50 });
                     }, Text);
                     Text.pop();
                     Column.pop();
@@ -102,6 +97,7 @@ export default class WaterFlowComponent extends ViewPU {
                         WaterFlow.columnsTemplate(Const.WATER_FLOW_COLUMNS_TEMPLATE);
                         WaterFlow.columnsGap({ "id": 16777288, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
                         WaterFlow.rowsGap({ "id": 16777291, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
+                        WaterFlow.padding({ left: 10, right: 10, bottom: 80 });
                     }, WaterFlow);
                     {
                         const __lazyForEachItemGenFunction = _item => {
@@ -113,7 +109,7 @@ export default class WaterFlowComponent extends ViewPU {
                             {
                                 this.observeComponentCreation2((elmtId, isInitialRender) => {
                                     if (isInitialRender) {
-                                        let componentCall = new FlowItemComponent(this, { item: item }, undefined, elmtId, () => { }, { page: "entry/src/main/ets/view/WaterFlowComponent.ets", line: 31, col: 26 });
+                                        let componentCall = new FlowItemComponent(this, { item: item }, undefined, elmtId, () => { }, { page: "entry/src/main/ets/view/WaterFlowComponent.ets", line: 32, col: 15 });
                                         ViewPU.create(componentCall);
                                         let paramsLambda = () => {
                                             return {
@@ -131,8 +127,8 @@ export default class WaterFlowComponent extends ViewPU {
                             }
                             FlowItem.pop();
                         };
-                        const __lazyForEachItemIdFunc = (item: ProductItem) => JSON.stringify(item);
-                        LazyForEach.create("1", this, this.datasource, __lazyForEachItemGenFunction, __lazyForEachItemIdFunc);
+                        const __lazyForEachItemIdFunc = (item: ProductItem) => item.id.toString();
+                        LazyForEach.create("1", this, this.dataSource, __lazyForEachItemGenFunction, __lazyForEachItemIdFunc);
                         LazyForEach.pop();
                     }
                     WaterFlow.pop();
@@ -144,20 +140,28 @@ export default class WaterFlowComponent extends ViewPU {
     }
     itemFoot(parent = null) {
         this.observeComponentCreation2((elmtId, isInitialRender) => {
+            // 优化 2 & 3: 使用 Flex 布局确保绝对居中，并根据系统导航栏适配高度
             Column.create();
-            Column.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(43:5)", "entry");
-            Column.margin({ top: { "id": 16777291, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }, bottom: this.getUIContext().px2vp(this.bottomRectHeight) });
+            Column.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(48:5)", "entry");
+            // 优化 2 & 3: 使用 Flex 布局确保绝对居中，并根据系统导航栏适配高度
+            Column.width('100%');
+            // 优化 2 & 3: 使用 Flex 布局确保绝对居中，并根据系统导航栏适配高度
+            Column.justifyContent(FlexAlign.Center);
+            // 优化 2 & 3: 使用 Flex 布局确保绝对居中，并根据系统导航栏适配高度
+            Column.alignItems(HorizontalAlign.Center);
+            // 优化 2 & 3: 使用 Flex 布局确保绝对居中，并根据系统导航栏适配高度
+            Column.padding({ bottom: this.getUIContext().px2vp(this.bottomRectHeight) });
         }, Column);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create({ "id": 16777224, "type": 10003, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
-            Text.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(44:7)", "entry");
-            Text.fontColor(Color.Gray);
-            Text.fontSize({ "id": 16777249, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
-            Text.width(Const.FULL_WIDTH);
-            Text.height({ "id": 16777248, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
+            Text.create("—— 到底了 ——");
+            Text.debugLine("entry/src/main/ets/view/WaterFlowComponent.ets(49:7)", "entry");
+            Text.fontColor('#999999');
+            Text.fontSize(12);
             Text.textAlign(TextAlign.Center);
+            Text.margin({ top: 10, bottom: 10 });
         }, Text);
         Text.pop();
+        // 优化 2 & 3: 使用 Flex 布局确保绝对居中，并根据系统导航栏适配高度
         Column.pop();
     }
     rerender() {

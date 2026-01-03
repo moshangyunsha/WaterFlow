@@ -8,10 +8,10 @@ interface FlowItemComponent_Params {
     isShowPopup?: boolean;
     currentImage?: ResourceStr;
     HOVER_SCALE?: number;
-    FIXED_IMAGE_HEIGHT?: Length;
 }
 import type ProductItem from '../viewmodel/ProductItem';
 import { CommonConstants as Const } from "@bundle:com.huawei.waterflow/entry/ets/common/constants/CommonConstants";
+import Logger from "@bundle:com.huawei.waterflow/entry/ets/common/utils/Logger";
 import router from "@ohos:router";
 export default class FlowItemComponent extends ViewPU {
     constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
@@ -25,7 +25,6 @@ export default class FlowItemComponent extends ViewPU {
         this.__isShowPopup = new ObservedPropertySimplePU(false, this, "isShowPopup");
         this.__currentImage = new ObservedPropertyObjectPU({ "id": 16777293, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }, this, "currentImage");
         this.HOVER_SCALE = 1.02;
-        this.FIXED_IMAGE_HEIGHT = { "id": 16777259, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" };
         this.setInitiallyProvidedValue(params);
         this.declareWatch("item", this.onItemChange);
         this.finalizeConstruction();
@@ -42,9 +41,6 @@ export default class FlowItemComponent extends ViewPU {
         }
         if (params.HOVER_SCALE !== undefined) {
             this.HOVER_SCALE = params.HOVER_SCALE;
-        }
-        if (params.FIXED_IMAGE_HEIGHT !== undefined) {
-            this.FIXED_IMAGE_HEIGHT = params.FIXED_IMAGE_HEIGHT;
         }
     }
     updateStateVars(params: FlowItemComponent_Params) {
@@ -66,6 +62,7 @@ export default class FlowItemComponent extends ViewPU {
         SubscriberManager.Get().delete(this.id__());
         this.aboutToBeDeletedInternal();
     }
+    // 监听 item 变化
     private __item: SynchedPropertySimpleOneWayPU<ProductItem>;
     get item() {
         return this.__item.get();
@@ -102,16 +99,18 @@ export default class FlowItemComponent extends ViewPU {
         this.__currentImage.set(newValue);
     }
     private readonly HOVER_SCALE: number;
-    private readonly FIXED_IMAGE_HEIGHT: Length;
+    // 移除固定高度，改为动态计算
+    // private readonly FIXED_IMAGE_HEIGHT: Length = $r('app.float.product_image_size');
     aboutToAppear() { this.updateImage(); }
     onItemChange() { this.updateImage(); }
     private updateImage() {
+        // 增加空值校验
         this.currentImage = this.item?.image_url || { "id": 16777293, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" };
     }
     PopupBuilder(parent = null) {
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Row.create({ space: 10 });
-            Row.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(28:5)", "entry");
+            Row.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(32:5)", "entry");
             Row.padding(10);
             Row.backgroundColor(Color.White);
             Row.borderRadius(8);
@@ -119,7 +118,7 @@ export default class FlowItemComponent extends ViewPU {
         }, Row);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Button.createWithLabel({ "id": 16777300, "type": 10003, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
-            Button.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(29:7)", "entry");
+            Button.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(33:7)", "entry");
             Button.fontSize(12);
             Button.backgroundColor(Color.White);
             Button.fontColor('#333333');
@@ -129,7 +128,7 @@ export default class FlowItemComponent extends ViewPU {
         Button.pop();
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Button.createWithLabel({ "id": 16777301, "type": 10003, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
-            Button.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(30:7)", "entry");
+            Button.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(34:7)", "entry");
             Button.fontSize(12);
             Button.backgroundColor({ "id": 16777235, "type": 10001, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
             Button.fontColor(Color.White);
@@ -142,11 +141,11 @@ export default class FlowItemComponent extends ViewPU {
     initialRender() {
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Column.create();
-            Column.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(36:5)", "entry");
+            Column.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(40:5)", "entry");
             Context.animation({ duration: 200 });
             Column.borderRadius({ "id": 16777264, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
             Column.backgroundColor(Color.White);
-            Column.padding({ left: 10, right: 10, bottom: 10 });
+            Column.clip(true);
             Column.scale({ x: this.scaleVal, y: this.scaleVal });
             Column.shadow(this.isSelfHovering ? { radius: 10, color: { "id": 16777235, "type": 10001, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }, offsetY: 5 } : ShadowStyle.OUTER_DEFAULT_XS);
             Context.animation(null);
@@ -163,59 +162,119 @@ export default class FlowItemComponent extends ViewPU {
             Column.onClick(() => {
                 this.currentHoverId = '';
                 Context.animateTo({ duration: 100 }, () => this.scaleVal = 0.95);
-                setTimeout(() => { Context.animateTo({ duration: 100 }, () => this.scaleVal = 1.0); router.pushUrl({ url: 'pages/ProductDetailPage', params: this.item }); }, 100);
+                setTimeout(() => {
+                    Context.animateTo({ duration: 100 }, () => this.scaleVal = 1.0);
+                    // 传递整个 item 对象给详情页
+                    router.pushUrl({ url: 'pages/ProductDetailPage', params: this.item });
+                }, 100);
             });
             Gesture.create(GesturePriority.Low);
             LongPressGesture.create({ repeat: false });
             LongPressGesture.onAction(() => this.isShowPopup = true);
             LongPressGesture.pop();
             Gesture.pop();
-            Column.bindPopup(this.isShowPopup, { builder: { builder: this.PopupBuilder.bind(this) }, placement: Placement.Top, mask: false, onStateChange: (e) => { if (!e.isVisible)
-                    this.isShowPopup = false; } });
+            Column.bindPopup(this.isShowPopup, {
+                builder: { builder: this.PopupBuilder.bind(this) },
+                placement: Placement.Top,
+                mask: false,
+                onStateChange: (e) => { if (!e.isVisible)
+                    this.isShowPopup = false; }
+            });
         }, Column);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
+            // --- 图片区域 ---
             Image.create(this.currentImage);
-            Image.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(37:7)", "entry");
-            Image.width(this.FIXED_IMAGE_HEIGHT);
-            Image.height(this.FIXED_IMAGE_HEIGHT);
-            Image.objectFit(ImageFit.Contain);
-            Image.margin({ top: { "id": 16777290, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }, bottom: { "id": 16777289, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" } });
+            Image.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(42:7)", "entry");
+            // --- 图片区域 ---
+            Image.width('100%');
+            // --- 图片区域 ---
+            Image.aspectRatio(this.item.width > 0 && this.item.height > 0 ? this.item.width / this.item.height : 1);
+            // --- 图片区域 ---
+            Image.objectFit(ImageFit.Cover);
+            // --- 图片区域 ---
+            Image.borderRadius({ topLeft: { "id": 16777264, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" }, topRight: { "id": 16777264, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" } });
+            // --- 图片区域 ---
             Image.onError(() => {
-                console.warn('FlowItem', `Image load failed for ${this.item.name}, fallback to default.`);
+                Logger.error('FlowItem', `Image load failed for ${this.item.name}, fallback to default.`);
                 this.currentImage = { "id": 16777295, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" };
             });
         }, Image);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
+            // --- 内容区域 ---
+            Column.create();
+            Column.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(56:7)", "entry");
+            // --- 内容区域 ---
+            Column.padding(10);
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            // 标题
             Text.create(this.item?.name);
-            Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(47:7)", "entry");
+            Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(58:9)", "entry");
+            // 标题
             Text.fontSize({ "id": 16777280, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
+            // 标题
             Text.fontColor(Color.Black);
+            // 标题
             Text.alignSelf(ItemAlign.Start);
+            // 标题
+            Text.maxLines(2);
+            // 标题
+            Text.textOverflow({ overflow: TextOverflow.Ellipsis });
         }, Text);
+        // 标题
         Text.pop();
         this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(this.item?.discount);
-            Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(48:7)", "entry");
-            Text.fontSize({ "id": 16777281, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
-            Text.opacity(Const.SIXTY_OPACITY);
-            Text.alignSelf(ItemAlign.Start);
-            Text.margin({ bottom: { "id": 16777247, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" } });
-        }, Text);
-        Text.pop();
+            If.create();
+            // 折扣信息 (可选)
+            if (this.item?.discount) {
+                this.ifElseBranchUpdateFunction(0, () => {
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        Text.create(this.item?.discount);
+                        Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(67:11)", "entry");
+                        Text.fontSize({ "id": 16777281, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
+                        Text.opacity(Const.SIXTY_OPACITY);
+                        Text.alignSelf(ItemAlign.Start);
+                        Text.margin({ top: 4 });
+                    }, Text);
+                    Text.pop();
+                });
+            }
+            // 价格 (核心修改：处理 number 类型)
+            else {
+                this.ifElseBranchUpdateFunction(1, () => {
+                });
+            }
+        }, If);
+        If.pop();
         this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(this.item?.price);
-            Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(49:7)", "entry");
+            // 价格 (核心修改：处理 number 类型)
+            Text.create(`¥${this.item?.price?.toFixed(2) || '0.00'}`);
+            Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(75:9)", "entry");
+            // 价格 (核心修改：处理 number 类型)
             Text.fontSize({ "id": 16777253, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
+            // 价格 (核心修改：处理 number 类型)
             Text.fontColor({ "id": 16777235, "type": 10001, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
+            // 价格 (核心修改：处理 number 类型)
             Text.alignSelf(ItemAlign.Start);
+            // 价格 (核心修改：处理 number 类型)
             Text.lineHeight({ "id": 16777258, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
+            // 价格 (核心修改：处理 number 类型)
+            Text.fontWeight(FontWeight.Bold);
+            // 价格 (核心修改：处理 number 类型)
+            Text.margin({ top: 4 });
         }, Text);
+        // 价格 (核心修改：处理 number 类型)
         Text.pop();
         this.observeComponentCreation2((elmtId, isInitialRender) => {
+            // 标签栏
             Row.create();
-            Row.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(51:7)", "entry");
+            Row.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(84:9)", "entry");
+            // 标签栏
             Row.width(Const.FULL_WIDTH);
+            // 标签栏
             Row.justifyContent(FlexAlign.Start);
+            // 标签栏
+            Row.margin({ top: 6 });
         }, Row);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             If.create();
@@ -223,13 +282,13 @@ export default class FlowItemComponent extends ViewPU {
                 this.ifElseBranchUpdateFunction(0, () => {
                     this.observeComponentCreation2((elmtId, isInitialRender) => {
                         Text.create(`${this.item?.promotion}`);
-                        Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(53:11)", "entry");
+                        Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(86:13)", "entry");
                         Text.fontSize({ "id": 16777265, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
                         Text.fontColor(Color.White);
                         Text.borderRadius(2);
                         Text.backgroundColor({ "id": 16777235, "type": 10001, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
                         Text.padding({ left: 4, right: 4 });
-                        Text.margin({ top: 4, right: 4 });
+                        Text.margin({ right: 4 });
                     }, Text);
                     Text.pop();
                 });
@@ -246,14 +305,13 @@ export default class FlowItemComponent extends ViewPU {
                 this.ifElseBranchUpdateFunction(0, () => {
                     this.observeComponentCreation2((elmtId, isInitialRender) => {
                         Text.create(`${this.item?.bonus_points}`);
-                        Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(56:11)", "entry");
+                        Text.debugLine("entry/src/main/ets/view/FlowItemComponent.ets(95:13)", "entry");
                         Text.fontSize({ "id": 16777265, "type": 10002, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
                         Text.fontColor({ "id": 16777235, "type": 10001, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
                         Text.borderRadius(2);
                         Text.borderWidth(1);
                         Text.borderColor({ "id": 16777235, "type": 10001, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" });
                         Text.padding({ left: 4, right: 4 });
-                        Text.margin({ top: 4 });
                     }, Text);
                     Text.pop();
                 });
@@ -264,7 +322,10 @@ export default class FlowItemComponent extends ViewPU {
             }
         }, If);
         If.pop();
+        // 标签栏
         Row.pop();
+        // --- 内容区域 ---
+        Column.pop();
         Column.pop();
     }
     rerender() {

@@ -1,0 +1,663 @@
+Ôr@Ÿªassertions¤code´customTransformCache¬dependencies¢id¤meta±moduleSideEffects¬originalCode±originalSourcemap«resolvedIds®sourcemapChainµsyntheticNamedExportsµtransformDependencies®transformFiles¨cacheAstÔrAÚA5if (!("finalizeConstruction" in ViewPU.prototype)) {
+    Reflect.set(ViewPU.prototype, "finalizeConstruction", () => { });
+}
+import router from '@ohos.router';
+import ProductItem from '../viewmodel/ProductItem';
+import promptAction from '@ohos.promptAction';
+import { User } from '../viewmodel/User';
+import RdbUtil from '../common/utils/RdbUtil';
+import { MOCK_PRODUCTS } from '../viewmodel/MockData';
+class ProductDetail extends ViewPU {
+    constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
+        super(parent, __localStorage, elmtId, extraInfo);
+        if (typeof paramsLambda === "function") {
+            this.paramsGenerator_ = paramsLambda;
+        }
+        this.__product = new ObservedPropertyObjectPU(new ProductItem({
+            id: 0,
+            merchantId: 0,
+            image_url: { "id": 16777293, "type": 20000, params: [], "bundleName": "com.huawei.waterflow", "moduleName": "entry" },
+            name: 'åŠ è½½ä¸­...',
+            price: 0,
+            width: 0,
+            height: 0
+        }), this, "product");
+        this.__topRectHeight = this.createStorageLink('topRectHeight', 0, "topRectHeight");
+        this.__currentUser = this.createStorageLink('currentUser', new User(0, '', 0, 0, ""), "currentUser");
+        this.__isAddedToCart = new ObservedPropertySimplePU(false, this, "isAddedToCart");
+        this.setInitiallyProvidedValue(params);
+        this.finalizeConstruction();
+    }
+    setInitiallyProvidedValue(params) {
+        if (params.product !== undefined) {
+            this.product = params.product;
+        }
+        if (params.isAddedToCart !== undefined) {
+            this.isAddedToCart = params.isAddedToCart;
+        }
+    }
+    updateStateVars(params) {
+    }
+    purgeVariableDependenciesOnElmtId(rmElmtId) {
+        this.__product.purgeDependencyOnElmtId(rmElmtId);
+        this.__topRectHeight.purgeDependencyOnElmtId(rmElmtId);
+        this.__currentUser.purgeDependencyOnElmtId(rmElmtId);
+        this.__isAddedToCart.purgeDependencyOnElmtId(rmElmtId);
+    }
+    aboutToBeDeleted() {
+        this.__product.aboutToBeDeleted();
+        this.__topRectHeight.aboutToBeDeleted();
+        this.__currentUser.aboutToBeDeleted();
+        this.__isAddedToCart.aboutToBeDeleted();
+        SubscriberManager.Get().delete(this.id__());
+        this.aboutToBeDeletedInternal();
+    }
+    get product() {
+        return this.__product.get();
+    }
+    set product(newValue) {
+        this.__product.set(newValue);
+    }
+    get topRectHeight() {
+        return this.__topRectHeight.get();
+    }
+    set topRectHeight(newValue) {
+        this.__topRectHeight.set(newValue);
+    }
+    get currentUser() {
+        return this.__currentUser.get();
+    }
+    set currentUser(newValue) {
+        this.__currentUser.set(newValue);
+    }
+    get isAddedToCart() {
+        return this.__isAddedToCart.get();
+    }
+    set isAddedToCart(newValue) {
+        this.__isAddedToCart.set(newValue);
+    }
+    async aboutToAppear() {
+        const params = router.getParams();
+        if (params) {
+            let currentItem = params;
+            if (!currentItem.description) {
+                const mockData = MOCK_PRODUCTS.find((item) => item.name === currentItem.name);
+                currentItem.description = mockData?.description || 'æš‚æ— è¯¦ç»†ä»‹ç»';
+            }
+            this.product = new ProductItem(currentItem);
+            if (this.currentUser.id) {
+                this.isAddedToCart = await RdbUtil.hasCartItem(this.currentUser.id, this.product.id);
+            }
+        }
+    }
+    async handleAddToCart() {
+        if (!this.currentUser || this.currentUser.id === 0) {
+            promptAction.showToast({ message: 'è¯·å…ˆç™»å½•' });
+            return;
+        }
+        if (this.isAddedToCart) {
+            promptAction.showToast({ message: 'è¯¥å•†å“å·²åœ¨è´­ç‰©è½¦ä¸­' });
+            return;
+        }
+        let success = await RdbUtil.addToCart(this.currentUser.id, this.product.id);
+        if (success) {
+            promptAction.showToast({ message: 'å·²åŠ å…¥è´­ç‰©è½¦' });
+            this.isAddedToCart = true;
+        }
+        else {
+            promptAction.showToast({ message: 'åŠ å…¥å¤±è´¥' });
+        }
+    }
+    // --- ç«‹å³è´­ä¹°é€»è¾‘ ---
+    async handleBuy() {
+        if (!this.currentUser || this.currentUser.id === 0) {
+            promptAction.showToast({ message: 'è¯·å…ˆç™»å½•' });
+            return;
+        }
+        // ç¡®å®šå›¾ç‰‡ Key
+        let imgForDb;
+        if (typeof this.product.image_url === 'string') {
+            imgForDb = this.product.image_url;
+        }
+        else {
+            imgForDb = 'ic_holder_computer';
+        }
+        // [ä¿®æ”¹] ä¼ é€’ merchantId
+        let code = await RdbUtil.createOrder(this.currentUser.id, this.product.name, this.product.price, imgForDb, this.product.merchantId // ä¼ å…¥å•†å®¶ID
+        );
+        if (code === 1) {
+            this.currentUser.balance -= this.product.price;
+            promptAction.showToast({ message: 'è´­ä¹°æˆåŠŸ' });
+        }
+        else if (code === -1) {
+            promptAction.showToast({ message: 'ä½™é¢ä¸è¶³ï¼Œè¯·å……å€¼' });
+        }
+        else {
+            promptAction.showToast({ message: 'ç³»ç»Ÿé”™è¯¯' });
+        }
+    }
+    async handleFav() {
+        if (!this.currentUser || this.currentUser.id === 0) {
+            promptAction.showToast({ message: 'è¯·å…ˆç™»å½•' });
+            return;
+        }
+        await RdbUtil.addFavorite(this.currentUser.id, this.product.id);
+        promptAction.showToast({ message: 'å·²åŠ å…¥æ”¶è—' });
+    }
+    initialRender() {
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Stack.create({ alignContent: Alignment.Bottom });
+            Stack.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(106:5)", "entry");
+            Stack.width('100%');
+            Stack.height('100%');
+        }, Stack);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Scroll.create();
+            Scroll.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(107:7)", "entry");
+            Scroll.width('100%');
+            Scroll.height('100%');
+            Scroll.align(Alignment.Top);
+            Scroll.backgroundColor('#F5F5F5');
+        }, Scroll);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Column.create();
+            Column.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(108:9)", "entry");
+            Column.width('100%');
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Stack.create({ alignContent: Alignment.BottomEnd });
+            Stack.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(109:11)", "entry");
+        }, Stack);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Image.create(this.product.image_url);
+            Image.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(110:13)", "entry");
+            Image.width('100%');
+            Image.height(350);
+            Image.objectFit(ImageFit.Contain);
+            Image.backgroundColor(Color.White);
+        }, Image);
+        Stack.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Column.create();
+            Column.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(117:11)", "entry");
+            Column.padding(16);
+            Column.backgroundColor(Color.White);
+            Column.width('100%');
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Row.create();
+            Row.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(118:13)", "entry");
+            Row.width('100%');
+            Row.alignItems(VerticalAlign.Bottom);
+            Row.margin({ bottom: 8 });
+        }, Row);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create('Â¥');
+            Text.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(119:15)", "entry");
+            Text.fontSize(16);
+            Text.fontColor('#FF5000');
+            Text.baselineOffset(-4);
+            Text.fontWeight(FontWeight.Bold);
+        }, Text);
+        Text.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create(this.product.price.toFixed(2));
+            Text.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(120:15)", "entry");
+            Text.fontSize(28);
+            Text.fontColor('#FF5000');
+            Text.fontWeight(FontWeight.Bold);
+            Text.margin({ right: 8 });
+        }, Text);
+        Text.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            If.create();
+            if (this.product.discount) {
+                this.ifElseBranchUpdateFunction(0, () => {
+                    this.observeComponentCreation2((elmtId, isInitialRender) => {
+                        Text.create(this.product.discount);
+                        Text.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(127:17)", "entry");
+                        Text.fontSize(12);
+                        Text.fontColor('#FF5000');
+                        Text.backgroundColor('#FFE4D0');
+                        Text.padding({ left: 4, right: 4, top: 1, bottom: 1 });
+                        Text.borderRadius(2);
+                    }, Text);
+                    Text.pop();
+                });
+            }
+            else {
+                this.ifElseBranchUpdateFunction(1, () => {
+                });
+            }
+        }, If);
+        If.pop();
+        Row.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Row.create();
+            Row.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(136:13)", "entry");
+            Row.width('100%');
+        }, Row);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create('ä»·æ ¼ Â¥' + (this.product.price * 1.2).toFixed(0));
+            Text.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(137:15)", "entry");
+            Text.fontSize(12);
+            Text.fontColor('#999');
+            Text.decoration({ type: TextDecorationType.LineThrough });
+        }, Text);
+        Text.pop();
+        Row.pop();
+        Column.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Divider.create();
+            Divider.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(147:11)", "entry");
+            Divider.strokeWidth(1);
+            Divider.color('#F5F5F5');
+        }, Divider);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Column.create();
+            Column.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(149:11)", "entry");
+            Column.padding(16);
+            Column.backgroundColor(Color.White);
+            Column.width('100%');
+            Column.alignItems(HorizontalAlign.Start);
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create(this.product.name);
+            Text.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(150:13)", "entry");
+            Text.fontSize(18);
+            Text.fontWeight(FontWeight.Bold);
+            Text.maxLines(2);
+            Text.textOverflow({ overflow: TextOverflow.Ellipsis });
+            Text.lineHeight(24);
+            Text.margin({ bottom: 8 });
+        }, Text);
+        Text.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create(this.product.description);
+            Text.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(158:13)", "entry");
+            Text.fontSize(14);
+            Text.fontColor('#666');
+            Text.margin({ top: 15 });
+        }, Text);
+        Text.pop();
+        Column.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Blank.create();
+            Blank.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(168:11)", "entry");
+            Blank.height(80);
+        }, Blank);
+        Blank.pop();
+        Column.pop();
+        Scroll.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Row.create();
+            Row.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(177:7)", "entry");
+            Row.width('100%');
+            Row.padding({ top: 10, bottom: 10, left: 15, right: 15 });
+            Row.backgroundColor(Color.White);
+        }, Row);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Column.create();
+            Column.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(178:9)", "entry");
+            Column.justifyContent(FlexAlign.Center);
+            Column.width(50);
+            Column.onClick(() => this.handleFav());
+            Column.backgroundColor(Color.White);
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create("â˜…");
+            Text.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(179:11)", "entry");
+            Text.fontSize(20);
+            Text.fontColor(Color.Orange);
+        }, Text);
+        Text.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create("æ”¶è—");
+            Text.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(180:11)", "entry");
+            Text.fontSize(10);
+            Text.fontColor(Color.Gray);
+        }, Text);
+        Text.pop();
+        Column.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Button.createWithLabel(this.isAddedToCart ? "å·²åœ¨è´­ç‰©è½¦" : "åŠ å…¥è´­ç‰©è½¦");
+            Button.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(187:9)", "entry");
+            Button.type(ButtonType.Normal);
+            Button.backgroundColor(this.isAddedToCart ? '#FFCC99' : '#FF9900');
+            Button.fontColor(Color.White);
+            Button.layoutWeight(1);
+            Button.height(40);
+            Button.borderRadius({ topLeft: 20, bottomLeft: 20 });
+            Button.margin({ left: 10 });
+            Button.enabled(!this.isAddedToCart);
+            Button.onClick(() => this.handleAddToCart());
+        }, Button);
+        Button.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Button.createWithLabel("ç«‹å³è´­ä¹°");
+            Button.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(198:9)", "entry");
+            Button.type(ButtonType.Normal);
+            Button.backgroundColor('#FF5000');
+            Button.fontColor(Color.White);
+            Button.layoutWeight(1);
+            Button.height(40);
+            Button.borderRadius({ topRight: 20, bottomRight: 20 });
+            Button.onClick(() => this.handleBuy());
+        }, Button);
+        Button.pop();
+        Row.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Row.create();
+            Row.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(211:7)", "entry");
+            Row.position({ x: 16, y: 16 + this.getUIContext().px2vp(this.topRectHeight) });
+            Row.zIndex(10);
+        }, Row);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Button.createWithLabel('<');
+            Button.debugLine("entry/src/main/ets/pages/ProductDetailPage.ets(212:9)", "entry");
+            Button.type(ButtonType.Circle);
+            Button.backgroundColor('#80000000');
+            Button.fontColor(Color.White);
+            Button.fontSize(18);
+            Button.width(32);
+            Button.height(32);
+            Button.onClick(() => { router.back(); });
+        }, Button);
+        Button.pop();
+        Row.pop();
+        Stack.pop();
+    }
+    rerender() {
+        this.updateDirtyElements();
+    }
+    static getEntryName() {
+        return "ProductDetail";
+    }
+}
+registerNamedRoute(() => new ProductDetail(undefined, {}), "", { bundleName: "com.huawei.waterflow", moduleName: "entry", pagePath: "pages/ProductDetailPage", pageFullPath: "entry/src/main/ets/pages/ProductDetailPage", integratedHsp: "false", moduleType: "followWithHap" });
+//# sourceMappingURL=ProductDetailPage.js.mapÂ–ÙQ hvigor_ignore_D:_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.router.d.tsÙMD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\ProductItem.etsÙW hvigor_ignore_D:_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.promptAction.d.tsÙFD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\User.etsÙLD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\common\utils\RdbUtil.etsÙJD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\MockData.etsÙOD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\pages\ProductDetailPage.etsÔrB›ªmoduleName±isLocalDependency¯isNodeEntryFile§pkgPath±belongProjectPath§pkgNameªpkgVersion±dependencyPkgInfo°belongModulePath§checker¬shouldEmitJs¥entryÃÂÙ&D:\Dev_studio_Projicts\WaterFlow\entryÙ D:\Dev_studio_Projicts\WaterFlow¥entry¥1.0.0Ô  Ù&D:\Dev_studio_Projicts\WaterFlow\entryÔrCÜ ®¬getNodeCount²getIdentifierCount®getSymbolCount¬getTypeCountµgetInstantiationCountµgetRelationCacheSizes±isUndefinedSymbol±isArgumentsSymbol¯isUnknownSymbol¯getMergedSymbol®getDiagnostics´getGlobalDiagnostics´getRecursionIdentity¶getUnmatchedProperties¹getTypeOfSymbolAtLocation¯getTypeOfSymbolÙ(getSymbolsOfParameterPropertyDeclaration·getDeclaredTypeOfSymbol³getPropertiesOfType±getPropertyOfTypeÙ"getPrivateIdentifierPropertyOfType·getTypeOfPropertyOfType²getIndexInfoOfType³getIndexInfosOfTypeºgetIndexInfosOfIndexSymbol³getSignaturesOfType²getIndexTypeOfType¬getIndexType¬getBaseTypes¸getBaseTypeOfLiteralType®getWidenedType³getTypeFromTypeNode°getParameterTypeÙ$getParameterIdentifierNameAtPosition¸getPromisedTypeOfPromise®getAwaitedType¸getReturnTypeOfSignature®isNullableType¯getNullableType²getNonNullableType²getNonOptionalType°getTypeArguments®typeToTypeNodeÙ$indexInfoToIndexSignatureDeclaration¿signatureToSignatureDeclaration²symbolToEntityName²symbolToExpression¬symbolToNodeÙ!symbolToTypeParameterDeclarations¼symbolToParameterDeclarationºtypeParameterToDeclaration±getSymbolsInScope³getSymbolAtLocation·getIndexInfosAtLocationÙ!getShorthandAssignmentValueSymbolÙ#getExportSpecifierLocalTargetSymbol·getExportSymbolOfSymbol±getTypeAtLocationºgetTypeAtLocationForLinterÙ tryGetTypeAtLocationWithoutCheckºgetTypeOfAssignmentPatternÙ*getPropertySymbolOfDestructuringAssignment±signatureToString¬typeToString®symbolToStringµtypePredicateToString®writeSignature©writeType«writeSymbol²writeTypePredicate¼getAugmentedPropertiesOfType®getRootSymbols²getSymbolOfExpando±getContextualTypeÙ(getContextualTypeForObjectLiteralElementÙ#getContextualTypeForArgumentAtIndexÙ getContextualTypeForJsxAttribute²isContextSensitiveÙ!getTypeOfPropertyOfContextualTypeµgetFullyQualifiedNameÙ#tryGetResolvedSignatureWithoutCheck´getResolvedSignatureÙ/getResolvedSignatureForStringLiteralCompletionsÙ$getResolvedSignatureForSignatureHelpµgetExpandedParameters¹hasEffectiveRestParameterºcontainsArgumentsReference°getConstantValueµisValidPropertyAccessÙ#isValidPropertyAccessForCompletions»getSignatureFromDeclarationºisImplementationOfOverload¹getImmediateAliasedSymbol°getAliasedSymbol¯getEmitResolver²getExportsOfModule¿getExportsAndPropertiesOfModuleÙ forEachExportAndPropertyOfModule¯getSymbolWalker±getAmbientModules¹getJsxIntrinsicTagNamesAt³isOptionalParameter»tryGetMemberInModuleExportsÙ(tryGetMemberInModuleExportsAndProperties´tryFindAmbientModuleÙ(tryFindAmbientModuleWithoutAugmentations¯getApparentType¬getUnionType²isTypeAssignableTo³createAnonymousType¯createSignature¬createSymbol¯createIndexInfoªgetAnyType­getStringType­getNumberType±createPromiseType¯createArrayType¹getElementTypeOfArrayType®getBooleanType¬getFalseType«getTrueType«getVoidType°getUndefinedType«getNullType¯getESSymbolType¬getNeverType¯getOptionalType®getPromiseType²getPromiseLikeType´getAsyncIterableType²isSymbolAccessible«isArrayType«isTupleType¯isArrayLikeTypeÙ#isTypeInvalidDueToUnionDiscriminantºgetExactOptionalProperties¿getAllPossiblePropertiesOfTypesÙ(getSuggestedSymbolForNonexistentPropertyÙ#getSuggestionForNonexistentPropertyÙ,getSuggestedSymbolForNonexistentJSXAttributeÙ&getSuggestedSymbolForNonexistentSymbolÙ!getSuggestionForNonexistentSymbolÙ&getSuggestedSymbolForNonexistentModuleÙ!getSuggestionForNonexistentExportÙ+getSuggestedSymbolForNonexistentClassMember·getBaseConstraintOfType»getDefaultFromTypeParameter«resolveName¯getJsxNamespaceµgetJsxFragmentFactory¸getAccessibleSymbolChain»getTypePredicateOfSignature¹resolveExternalModuleName»resolveExternalModuleSymbol°tryGetThisTypeAt¹getTypeArgumentConstraint¸getSuggestionDiagnostics¸runWithCancellationTokenÙ3getLocalTypeParametersOfClassOrInterfaceOrTypeAlias´isDeclarationVisible´isPropertyAccessible»getTypeOnlyAliasDeclaration¿getMemberOverrideModifierStatusÙ!isTypeParameterPossiblyReferenced²getConstEnumRelate´clearConstEnumRelateµdeleteConstEnumRelateÙ$getTypeArgumentsForResolvedSignatureµgetCheckedSourceFilesÙ"collectHaveTsNoCheckFilesForLinter·clearQualifiedNameCache®isStaticRecord²isStaticSourceFileÔ  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  ÃÃÚimport router from '@ohos.router';
+import ProductItem from '../viewmodel/ProductItem';
+import promptAction from '@ohos.promptAction';
+import { User } from '../viewmodel/User';
+import RdbUtil from '../common/utils/RdbUtil';
+import { MOCK_PRODUCTS, RawProductData } from '../viewmodel/MockData';
+
+@Entry
+@Component
+struct ProductDetail {
+  @State product: ProductItem = new ProductItem({
+    id: 0,
+    merchantId: 0,
+    image_url: $r('app.media.loading'),
+    name: 'åŠ è½½ä¸­...',
+    price: 0,
+    width: 0,
+    height: 0
+  });
+
+  @StorageLink('topRectHeight') topRectHeight: number = 0;
+  @StorageLink('currentUser') currentUser: User = new User(0, '', 0, 0, "");
+
+  @State isAddedToCart: boolean = false;
+
+  async aboutToAppear() {
+    const params = router.getParams();
+    if (params) {
+      let currentItem = params as ProductItem;
+      if (!currentItem.description) {
+        const mockData: RawProductData | undefined = MOCK_PRODUCTS.find((item: RawProductData) => item.name === currentItem.name);
+        currentItem.description = mockData?.description || 'æš‚æ— è¯¦ç»†ä»‹ç»';
+      }
+      this.product = new ProductItem(currentItem);
+
+      if (this.currentUser.id) {
+        this.isAddedToCart = await RdbUtil.hasCartItem(this.currentUser.id, this.product.id);
+      }
+    }
+  }
+
+  async handleAddToCart() {
+    if (!this.currentUser || this.currentUser.id === 0) {
+      promptAction.showToast({ message: 'è¯·å…ˆç™»å½•' });
+      return;
+    }
+
+    if (this.isAddedToCart) {
+      promptAction.showToast({ message: 'è¯¥å•†å“å·²åœ¨è´­ç‰©è½¦ä¸­' });
+      return;
+    }
+
+    let success = await RdbUtil.addToCart(this.currentUser.id, this.product.id);
+    if (success) {
+      promptAction.showToast({ message: 'å·²åŠ å…¥è´­ç‰©è½¦' });
+      this.isAddedToCart = true;
+    } else {
+      promptAction.showToast({ message: 'åŠ å…¥å¤±è´¥' });
+    }
+  }
+
+  // --- ç«‹å³è´­ä¹°é€»è¾‘ ---
+  async handleBuy() {
+    if (!this.currentUser || this.currentUser.id === 0) {
+      promptAction.showToast({ message: 'è¯·å…ˆç™»å½•' });
+      return;
+    }
+
+    // ç¡®å®šå›¾ç‰‡ Key
+    let imgForDb: string;
+    if (typeof this.product.image_url === 'string') {
+      imgForDb = this.product.image_url;
+    } else {
+      imgForDb = 'ic_holder_computer';
+    }
+
+    // [ä¿®æ”¹] ä¼ é€’ merchantId
+    let code = await RdbUtil.createOrder(
+      this.currentUser.id,
+      this.product.name,
+      this.product.price,
+      imgForDb,
+      this.product.merchantId // ä¼ å…¥å•†å®¶ID
+    );
+
+    if (code === 1) {
+      this.currentUser.balance -= this.product.price;
+      promptAction.showToast({ message: 'è´­ä¹°æˆåŠŸ' });
+    } else if (code === -1) {
+      promptAction.showToast({ message: 'ä½™é¢ä¸è¶³ï¼Œè¯·å……å€¼' });
+    } else {
+      promptAction.showToast({ message: 'ç³»ç»Ÿé”™è¯¯' });
+    }
+  }
+
+  async handleFav() {
+    if (!this.currentUser || this.currentUser.id === 0) {
+      promptAction.showToast({ message: 'è¯·å…ˆç™»å½•' });
+      return;
+    }
+    await RdbUtil.addFavorite(this.currentUser.id, this.product.id);
+    promptAction.showToast({ message: 'å·²åŠ å…¥æ”¶è—' });
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Scroll() {
+        Column() {
+          Stack({ alignContent: Alignment.BottomEnd }) {
+            Image(this.product.image_url)
+              .width('100%')
+              .height(350)
+              .objectFit(ImageFit.Contain)
+              .backgroundColor(Color.White)
+          }
+
+          Column() {
+            Row() {
+              Text('Â¥').fontSize(16).fontColor('#FF5000').baselineOffset(-4).fontWeight(FontWeight.Bold)
+              Text(this.product.price.toFixed(2))
+                .fontSize(28)
+                .fontColor('#FF5000')
+                .fontWeight(FontWeight.Bold)
+                .margin({ right: 8 })
+
+              if (this.product.discount) {
+                Text(this.product.discount)
+                  .fontSize(12)
+                  .fontColor('#FF5000')
+                  .backgroundColor('#FFE4D0')
+                  .padding({ left: 4, right: 4, top: 1, bottom: 1 })
+                  .borderRadius(2)
+              }
+            }.width('100%').alignItems(VerticalAlign.Bottom).margin({ bottom: 8 })
+
+            Row() {
+              Text('ä»·æ ¼ Â¥' + (this.product.price * 1.2).toFixed(0))
+                .fontSize(12)
+                .fontColor('#999')
+                .decoration({ type: TextDecorationType.LineThrough })
+            }.width('100%')
+          }
+          .padding(16)
+          .backgroundColor(Color.White)
+          .width('100%')
+
+          Divider().strokeWidth(1).color('#F5F5F5')
+
+          Column() {
+            Text(this.product.name)
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .lineHeight(24)
+              .margin({ bottom: 8 })
+
+            Text(this.product.description)
+              .fontSize(14)
+              .fontColor('#666')
+              .margin({ top: 15 })
+          }
+          .padding(16)
+          .backgroundColor(Color.White)
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+
+          Blank().height(80)
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .height('100%')
+      .align(Alignment.Top)
+      .backgroundColor('#F5F5F5')
+
+      Row() {
+        Column() {
+          Text("â˜…").fontSize(20).fontColor(Color.Orange)
+          Text("æ”¶è—").fontSize(10).fontColor(Color.Gray)
+        }
+        .justifyContent(FlexAlign.Center)
+        .width(50)
+        .onClick(() => this.handleFav())
+        .backgroundColor(Color.White)
+
+        Button(this.isAddedToCart ? "å·²åœ¨è´­ç‰©è½¦" : "åŠ å…¥è´­ç‰©è½¦")
+          .type(ButtonType.Normal)
+          .backgroundColor(this.isAddedToCart ? '#FFCC99' : '#FF9900')
+          .fontColor(Color.White)
+          .layoutWeight(1)
+          .height(40)
+          .borderRadius({ topLeft: 20, bottomLeft: 20 })
+          .margin({ left: 10 })
+          .enabled(!this.isAddedToCart)
+          .onClick(() => this.handleAddToCart())
+
+        Button("ç«‹å³è´­ä¹°")
+          .type(ButtonType.Normal)
+          .backgroundColor('#FF5000')
+          .fontColor(Color.White)
+          .layoutWeight(1)
+          .height(40)
+          .borderRadius({ topRight: 20, bottomRight: 20 })
+          .onClick(() => this.handleBuy())
+      }
+      .width('100%')
+      .padding({ top: 10, bottom: 10, left: 15, right: 15 })
+      .backgroundColor(Color.White)
+
+      Row() {
+        Button('<')
+          .type(ButtonType.Circle)
+          .backgroundColor('#80000000')
+          .fontColor(Color.White)
+          .fontSize(18)
+          .width(32)
+          .height(32)
+          .onClick(() => { router.back(); })
+      }
+      .position({ x: 16, y: 16 + this.getUIContext().px2vp(this.topRectHeight) })
+      .zIndex(10)
+    }
+    .width('100%')
+    .height('100%')
+  }
+}ÀÔrD–¬@ohos.router²@ohos.promptAction±../viewmodel/User·../common/utils/RdbUtilµ../viewmodel/MockData¸../viewmodel/ProductItemÔrE—ªassertions¨external¢id¤meta±moduleSideEffectsªresolvedByµsyntheticNamedExportsAÃÙQ hvigor_ignore_D:_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.router.d.tsAÃªoh-resolveÂEAÃÙW hvigor_ignore_D:_DevEco Studio_sdk_default_openharmony_ets_api_@ohos.promptAction.d.tsAÃªoh-resolveÂEAÂÙFD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\User.etsAÃªoh-resolveÂEAÂÙLD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\common\utils\RdbUtil.etsAÃªoh-resolveÂEAÂÙJD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\MockData.etsAÃªoh-resolveÂEAÂÙMD:\Dev_studio_Projicts\WaterFlow\entry\src\main\ets\viewmodel\ProductItem.etsAÃªoh-resolveÂ“ÔrF–§version¤fileªsourceRoot§sources¥names¨mappings´ProductDetailPage.js ‘µProductDetailPage.etsÜq–”    ”  ”  ”  ”!  !”"  "–”   ” ” ” ”2 2”3 3–”   ” ” ” ”- -”. .˜”   ” ”	 	” ” ” ”( (”) )–”   ” ” ” ”- -”. .˜”   ” ”	 	” ” (” .”5 ÌE”6 ÌF’” 	” 	‘”  ””6 
+ ”: 
+$”ÌE 
+/”ÌF 
+0”” ” ” ” 	”” ” ” ” “” ” ”Ì &”” ” ” 
+” ”” ” 	” ” ”” ” 	” ” ”” ” 
+” ” ’”	 ”
+ ””6 ”ÌE ”ÌG 8”ÌH 9Ü ”4 ”ÌA ”ÌC 2”ÌG 6”ÌK :”ÌL ;”ÌM <”ÌO >”ÌQ Ì@”ÌS ÌB”ÌT ÌC”ÌV ÌE”ÌW ÌF”ÌY ÌH”Ì[ ÌJ”Ì\ ÌK’”< "”ÌA '‘” ÌF’” 
+	” 
+’” 
+	” 
+’”  ” -’”  ” -’” ” )’” ” )’” 	” ’” 	” ”” ”	 ”
+ ” ™” ” 
+” ” ” ” ”' #”) %”* &”” ” ” ” –” ” 
+” ” ”$ -”% .—” ” 
+” ” ” ”( "”* $Ü ” ” ” ”! 5”. ÌB”/ ÌC”3 ÌG”4 ÌH”5 ÌI”9 Ì]”; Ì_”= Ìa”> Ìb”ÌB Ìf”ÌC Ìg”ÌG Ìk”ÌL Ìp”ÌW Ì{”ÌX Ì|”Ì\ Ì€”Ì] Ì”Ì^ Ì‚›” ” ” ”' ”* "”2 *”4 ,”? 7”ÌC ;”ÌK ÌC”ÌL ÌD‘”  ›” !” !
+” !” !” !” !”* !$”+ !%”6 !0”7 !1”8 !2˜” #” #
+” #” #”  #”! #”# #”% #Ü ” $” $” $”" $”% $”+ $#”2 $*”3 $+”> $6”? $7”ÌC $;”ÌD $<”ÌO $ÌG”ÌP $ÌH”ÌR $ÌJ”ÌT $ÌL”ÌX $ÌP”ÌY $ÌQ”Ì` $ÌX”Ìa $ÌY”Ìc $Ì[”Ìd $Ì\”Ìe $Ì]‘” %‘”	 &’” '” '”” )”	 )”
+ )” )Ÿ” *” *” *	” *” *” *”! *”% *!”& *"”1 *-”2 *.”4 *0”9 *5”: *6”< *8œ” +” +” +”" +”# +”% +”, +&”. +(”4 +.”6 +0”7 +1”8 +2’” ,” ,‘”	 -–” /” /” /” /” /”  /œ” 0” 0” 0”" 0”# 0”% 0”, 0&”. 0(”9 03”; 05”< 06”= 07’” 1” 1‘”	 2Ü ” 4” 4” 4” 4” 4”# 4”$ 4 ”- 4)”. 4*”2 4.”3 4/”> 4:”? 4;”ÌA 4=”ÌC 4?”ÌG 4ÌC”ÌH 4ÌD”ÌO 4ÌK”ÌP 4ÌL”ÌR 4ÌN”ÌS 4ÌO”ÌT 4ÌP”” 5” 5” 5” 5œ” 6” 6” 6”" 6”# 6”% 6”, 6&”. 6(”6 60”8 62”9 63”: 64—” 7” 7
+” 7” 7”! 7”% 7”& 7 ‘”	 8‘” 8œ” 9” 9” 9”" 9”# 9”% 9”, 9&”. 9(”4 9.”6 90”7 91”8 92‘”	 :’” ;” ;’” =” =”” >”	 >”
+ >” >Ÿ” ?” ?” ?	” ?” ?” ?”! ?”% ?!”& ?"”1 ?-”2 ?.”4 ?0”9 ?5”: ?6”< ?8œ” Ì@” Ì@” Ì@”" Ì@”# Ì@”% Ì@”, Ì@&”. Ì@(”4 Ì@.”6 Ì@0”7 Ì@1”8 Ì@2’” ÌA” ÌA‘”	 ÌB’” ÌD” ÌD”” ÌE” ÌE” ÌE” ÌE›” ÌF” ÌF” ÌF” ÌF” ÌF” ÌF”  ÌF”) ÌF%”. ÌF*”6 ÌF2”8 ÌF4™” ÌG” ÌG” ÌG” ÌG” ÌG”# ÌG”$ ÌG”- ÌG'”. ÌG(‘”	 ÌH‘” ÌH•” ÌI” ÌI” ÌI”+ ÌI%”, ÌI&‘”	 ÌJ’” ÌL” ÌLÜ $” ÌM” ÌM” ÌM” ÌM” ÌM”  ÌM”! ÌM”, ÌM(”- ÌN”1 ÌN
+”2 ÌN”= ÌN”> ÌN”Ì@ ÌN”ÌB ÌO”ÌF ÌO
+”ÌG ÌO”ÌN ÌO”ÌO ÌO”ÌS ÌO”ÌU ÌP”ÌY ÌP
+”ÌZ ÌP”Ìa ÌP”Ìb ÌP”Ìg ÌP”Ìi ÌQ”Ìq ÌQ”Ìs ÌR”Ìw ÌR
+”Ìx ÌR”Ì ÌR”Ì€ ÌR”ÌŠ ÌR”Ì‹ ÌR”Ì” ÌR'’”	 ÌS”
+ ÌS–” ÌU” ÌU” ÌU” ÌU” ÌU” ÌU” ÌV” ÌV
+” ÌV” ÌV” ÌV”$ ÌV”( ÌV"”, ÌV&”- ÌV'”4 ÌV.”5 ÌV/”: ÌV4”; ÌV5œ” ÌW” ÌW” ÌW”" ÌW”# ÌW”% ÌW”, ÌW&”. ÌW(”4 ÌW.”6 ÌW0”7 ÌW1”8 ÌW2‘”	 ÌX—” ÌX” ÌX” ÌX” ÌX” ÌX” ÌX” ÌXœ” ÌY” ÌY” ÌY”" ÌY”# ÌY”% ÌY”, ÌY&”. ÌY(”8 ÌY2”: ÌY4”; ÌY5”< ÌY6‘”	 ÌZ‘” ÌZœ” Ì[” Ì[” Ì[”" Ì[”# Ì[”% Ì[”, Ì[&”. Ì[(”4 Ì[.”6 Ì[0”7 Ì[1”8 Ì[2‘”	 Ì\’” Ì]” Ì]”” Ì_”	 Ì_”
+ Ì_” Ì_Ÿ” Ì`” Ì`” Ì`	” Ì`” Ì`” Ì`”! Ì`”% Ì`!”& Ì`"”1 Ì`-”2 Ì`.”4 Ì`0”9 Ì`5”: Ì`6”< Ì`8œ” Ìa” Ìa” Ìa”" Ìa”# Ìa”% Ìa”, Ìa&”. Ìa(”4 Ìa.”6 Ìa0”7 Ìa1”8 Ìa2’” Ìb” Ìb‘”	 ÌcÜ ” Ìd” Ìd
+” Ìd” Ìd”! Ìd”" Ìd”& Ìd"”' Ìd#”2 Ìd.”3 Ìd/”5 Ìd1”7 Ìd3”; Ìd7”< Ìd8”ÌC Ìd?”ÌD ÌdÌ@”ÌF ÌdÌB”ÌG ÌdÌC”ÌH ÌdÌDœ” Ìe” Ìe” Ìe” Ìe” Ìe”! Ìe”( Ìe$”* Ìe&”1 Ìe-”3 Ìe/”4 Ìe0”5 Ìe1’” Ìf” Ìf‘” Ìhš” Ìi” Ìi	” Ìi
+” Ìi”' Ìi”) Ìi”2 Ìi#”3 Ìi$”9 Ìi*”; Ìi,–” Ìi” Ìi	” Ìß” Ìß
+” Ìß” Ìß–” Ìi” Ìi	” Ìà” Ìà” Ìà” Ìà’” Ìj” Ìj–” Ìj” Ìj” Ì«” Ì«” Ì«” Ì«–” Ìj” Ìj” Ì¬” Ì¬” Ì¬”  Ì¬˜” Ìj” Ìj” Ì­” Ì­” Ì­”" Ì­”# Ì­”& Ì­–” Ìj” Ìj” Ì®”" Ì®”# Ì®”, Ì® ’” Ìk” Ìk–” Ìk” Ìk” Ì©	” Ì©” Ì©” Ì©š” Ìl
+” Ìl” Ìl” Ìl”' Ìl”) Ìl ”2 Ìl)”3 Ìl*”< Ìl3”> Ìl5˜” Ìm” Ìm” Ìm” Ìm” Ìm”% Ìm”& Ìm”/ Ìm(–” Ìm” Ìm” Ìn” Ìn” Ìn” Ìn–” Ìm” Ìm” Ìo” Ìo” Ìo” Ìo˜” Ìm” Ìm” Ìp” Ìp” Ìp”$ Ìp!”% Ìp"”, Ìp)˜” Ìm” Ìm” Ìq”! Ìq”" Ìq”' Ìq$”( Ìq%”- Ìq*’” Ìl
+” Ìl’” Ìt
+” Ìt–” Ìt
+” Ìt” Ì” Ì” Ì” Ì˜” Ìt
+” Ìt” Ì”" Ì”# Ì”( Ì ”) Ì!”. Ì&–” Ìt
+” Ìt” Ì” Ì” Ì” Ì’” Ìu” Ìu–” Ìu” Ìu” Ì…” Ì…” Ì…” Ì…˜” Ìu” Ìu” Ì…” Ì…&” Ì…'”( Ì…4”) Ì…5”/ Ì…;š” Ìu” Ìu” Ì…=” Ì…ÌC” Ì…ÌD” Ì…ÌF” Ì…ÌL”! Ì…ÌN”" Ì…ÌO”$ Ì…ÌQ”” Ìv” Ìv” Ìv” Ìv–” Ìv” Ìv” Ìv” Ìv ” Ìv!” Ìv#–” Ìv” Ìv” Ìv%” Ìv.” Ìv/”$ Ìv8—” Ìv” Ìv” Ìv:” ÌvÌH”  ÌvÌI”! ÌvÌJ”" ÌvÌK˜” Ìv” Ìv” ÌvÌM” ÌvÌW” ÌvÌX”& ÌvÌb”' ÌvÌc”+ ÌvÌg’” Ìv” Ìv” Ìw” Ìw” Ìw” Ìw” Ìw”$ Ìw”% Ìw ”* Ìw%”+ Ìw&”2 Ìw-”3 Ìw.”4 Ìw/”5 Ìw0–” Ìw” Ìw” Ìx” Ìx” Ìx” Ìx–” Ìw” Ìw” Ìy” Ìy” Ìy”$ Ìy$˜” Ìw” Ìw” Ìz” Ìz” Ìz”& Ìz&”' Ìz'”+ Ìz+š” Ìw” Ìw” Ì{” Ì{” Ì{” Ì{” Ì{”! Ì{!”" Ì{"”$ Ì{$’” Ìw” Ìw˜” Ì}” Ì}” Ì}” Ì}” Ì}” Ì}”% Ì}'”' Ì})˜” Ì~” Ì~”$ Ì~”( Ì~”) Ì~”0 Ì~!”1 Ì~"”9 Ì~*–” Ì~” Ì~” Ì”% Ì”& Ì”( Ì–” Ì~” Ì~” Ì€”& Ì€”' Ì€”0 Ì€&–” Ì~” Ì~” Ì”, Ì"”- Ì#”6 Ì,Ü ” Ì~” Ì~” Ì‚”$ Ì‚”% Ì‚”' Ì‚”+ Ì‚!”- Ì‚#”. Ì‚$”0 Ì‚&”5 Ì‚+”7 Ì‚-”8 Ì‚.”: Ì‚0”= Ì‚3”? Ì‚5”Ì@ Ì‚6”ÌB Ì‚8”ÌH Ì‚>”ÌJ Ì‚Ì@”ÌK Ì‚ÌA”ÌM Ì‚ÌC–” Ì~” Ì~” Ìƒ”) Ìƒ”* Ìƒ ”+ Ìƒ!’” Ì~” Ì~‘” Ì„‘” Ì„’” Ìu” Ìu’” Ì‡” Ì‡–” Ì‡” Ì‡” ÌŒ” ÌŒ” ÌŒ” ÌŒÜ ” Ìˆ” Ìˆ” Ìˆ” Ìˆ”! Ìˆ”" Ìˆ”& Ìˆ!”' Ìˆ"”. Ìˆ)”/ Ìˆ*”4 Ìˆ/”7 Ìˆ2”: Ìˆ5”; Ìˆ6”< Ìˆ7”ÌC Ìˆ>”ÌD Ìˆ?”ÌE ÌˆÌ@”ÌF ÌˆÌA–” Ìˆ” Ìˆ” Ì‰” Ì‰” Ì‰” Ì‰–” Ìˆ” Ìˆ” ÌŠ” ÌŠ” ÌŠ”! ÌŠ!œ” Ìˆ” Ìˆ” Ì‹” Ì‹” Ì‹” Ì‹”" Ì‹"”$ Ì‹$”6 Ì‹6”7 Ì‹7”ÌB Ì‹ÌB”ÌD Ì‹ÌD’” Ìˆ” Ìˆ’” Ì‡” Ì‡’” Ìt
+” Ìt’” Ì’
+” Ì’–” Ì’
+” Ì’” Ì’” Ì’”  Ì’ ”! Ì’!–” Ì’
+” Ì’” Ì’#” Ì’(” Ì’)”# Ì’2’” Ì”
+” Ì”–” Ì”
+” Ì”” Ì¢” Ì¢” Ì¢” Ì¢˜” Ì”
+” Ì”” Ì£”" Ì£”# Ì£”( Ì£ ”) Ì£!”. Ì£&–” Ì”
+” Ì”” Ì¤” Ì¤” Ì¤” Ì¤˜” Ì”
+” Ì”” Ì¥” Ì¥” Ì¥”- Ì¥%”. Ì¥&”3 Ì¥+˜” Ì•” Ì•” Ì•” Ì•” Ì•”$ Ì•”% Ì•”) Ì•"–” Ì•” Ì•” Ì–” Ì–” Ì–” Ì–˜” Ì•” Ì•” Ì—” Ì—” Ì—”& Ì—$”' Ì—%”+ Ì—)–” Ì•” Ì•” Ì˜” Ì˜” Ì˜” Ì˜œ” Ì•” Ì•” Ì™” Ì™” Ì™”  Ì™”( Ì™&”* Ì™(”6 Ì™4”7 Ì™5”? Ì™=”ÌA Ì™?–” Ì•” Ì•” Ìš” Ìš” Ìš” Ìšš” Ì•” Ì•” Ì›” Ì›” Ì›” Ì›”  Ì›”" Ì› ”# Ì›!”% Ì›#’” Ì•” Ì•˜” Ì” Ì” Ì” Ì” Ì”$ Ì”% Ì”0 Ì)–” Ì” Ì” Ì” Ì” Ì” Ì–” Ì” Ì” ÌŸ” ÌŸ” ÌŸ”! ÌŸš” Ì” Ì” Ì ” Ì ” Ì ” Ì ” Ì ” Ì ”! Ì ”# Ì !’” Ì” Ì’” Ì”
+” Ì”’” Ì§
+” Ì§–” Ì§
+” Ì§” Ì§” Ì§” Ì§” Ì§’” Ì§
+” Ì§’” Ìk” Ìk’” Ìj” Ìj’” Ì°” Ì°	–” Ì°” Ì°	” ÌÎ” ÌÎ” ÌÎ” ÌÎÜ ” Ì°” Ì°	” ÌÏ” ÌÏ” ÌÏ” ÌÏ” ÌÏ” ÌÏ”! ÌÏ”# ÌÏ”) ÌÏ ”+ ÌÏ"”- ÌÏ$”/ ÌÏ&”3 ÌÏ*”5 ÌÏ,”7 ÌÏ.”9 ÌÏ0”> ÌÏ5”Ì@ ÌÏ7”ÌB ÌÏ9”ÌD ÌÏ;˜” Ì°” Ì°	” ÌĞ” ÌĞ”  ÌĞ”% ÌĞ”& ÌĞ”+ ÌĞ"’” Ì±” Ì±˜” Ì±” Ì±” Ìµ	”! Ìµ”" Ìµ”+ Ìµ!”, Ìµ"”2 Ìµ(–” Ì±” Ì±” Ì¶	” Ì¶” Ì¶” Ì¶œ” Ì±” Ì±” Ì·	” Ì·” Ì·” Ì·”  Ì·”! Ì·”% Ì·”& Ì·”/ Ì·%”1 Ì·'˜” Ì±” Ì±” Ì¸	”" Ì¸”# Ì¸”( Ì¸”) Ì¸”. Ì¸$”” Ì²
+” Ì²” Ì²” Ì²–” Ì²
+” Ì²” Ì²” Ì²” Ì²” Ì²˜” Ì²
+” Ì²” Ì²!” Ì²*” Ì²+”  Ì²0”! Ì²1”' Ì²7’” Ì²
+” Ì²”” Ì³
+” Ì³” Ì³” Ì³–” Ì³
+” Ì³” Ì³” Ì³” Ì³” Ì³ ˜” Ì³
+” Ì³” Ì³"” Ì³+” Ì³,”  Ì³1”! Ì³2”% Ì³6’” Ì³
+” Ì³’” Ì±” Ì±” Ìº” Ìº”# Ìº”' Ìº”( Ìº”5 Ìº!”6 Ìº"”7 Ìº#”8 Ìº$”? Ìº+”Ì@ Ìº,”ÌA Ìº-”ÌB Ìº.”ÌI Ìº5˜” Ìº” Ìº” Ì»” Ì»” Ì»”" Ì»”# Ì»”) Ì»!Ü ” Ìº” Ìº” Ì¼”" Ì¼”# Ì¼”' Ì¼”( Ì¼ ”5 Ì¼-”6 Ì¼.”7 Ì¼/”8 Ì¼0”ÌA Ì¼9”ÌB Ì¼:”ÌC Ì¼;”ÌD Ì¼<”ÌM Ì¼ÌE˜” Ìº” Ìº” Ì½” Ì½” Ì½”" Ì½”# Ì½”( Ì½ –” Ìº” Ìº” Ì¾” Ì¾”  Ì¾”! Ì¾–” Ìº” Ìº” Ì¿” Ì¿” Ì¿” Ì¿” Ìº” Ìº” ÌÀ” ÌÀ”  ÌÀ”" ÌÀ”) ÌÀ!”+ ÌÀ#”- ÌÀ%”/ ÌÀ'”9 ÌÀ1”; ÌÀ3”= ÌÀ5”? ÌÀ7š” Ìº” Ìº” ÌÁ” ÌÁ” ÌÁ” ÌÁ”  ÌÁ”" ÌÁ”$ ÌÁ”& ÌÁ™” Ìº” Ìº” ÌÂ” ÌÂ” ÌÂ” ÌÂ”  ÌÂ”! ÌÂ”. ÌÂ&œ” Ìº” Ìº” ÌÃ” ÌÃ” ÌÃ” ÌÃ”  ÌÃ”! ÌÃ”% ÌÃ”& ÌÃ”5 ÌÃ-”7 ÌÃ/’” Ìº” Ìº”” ÌÅ” ÌÅ”# ÌÅ”) ÌÅ˜” ÌÅ” ÌÅ” ÌÆ” ÌÆ” ÌÆ”" ÌÆ”# ÌÆ”) ÌÆ!–” ÌÅ” ÌÅ” ÌÇ”" ÌÇ”# ÌÇ”, ÌÇ$˜” ÌÅ” ÌÅ” ÌÈ” ÌÈ” ÌÈ”" ÌÈ”# ÌÈ”( ÌÈ –” ÌÅ” ÌÅ” ÌÉ” ÌÉ”  ÌÉ”! ÌÉ–” ÌÅ” ÌÅ” ÌÊ” ÌÊ” ÌÊ” ÌÊ” ÌÅ” ÌÅ” ÌË” ÌË”  ÌË”" ÌË”* ÌË"”, ÌË$”. ÌË&”0 ÌË(”; ÌË3”= ÌË5”? ÌË7”ÌA ÌË9œ” ÌÅ” ÌÅ” ÌÌ” ÌÌ” ÌÌ” ÌÌ”  ÌÌ”! ÌÌ”% ÌÌ”& ÌÌ”/ ÌÌ'”1 ÌÌ)’” ÌÅ” ÌÅ’” Ì°” Ì°	’” ÌÒ” ÌÒ	Ü ” ÌÒ” ÌÒ	” ÌÜ” ÌÜ” ÌÜ” ÌÜ” ÌÜ” ÌÜ”  ÌÜ”" ÌÜ”# ÌÜ”% ÌÜ”' ÌÜ”* ÌÜ!”. ÌÜ%”/ ÌÜ&”; ÌÜ2”= ÌÜ4”> ÌÜ5”ÌC ÌÜ:”ÌD ÌÜ;”ÌH ÌÜ?”ÌI ÌÜÌ@”ÌV ÌÜÌM”ÌW ÌÜÌN”ÌY ÌÜÌP–” ÌÒ” ÌÒ	” Ìİ” Ìİ” Ìİ” Ìİ”” ÌÓ” ÌÓ”# ÌÓ”& ÌÓ˜” ÌÓ” ÌÓ” ÌÔ” ÌÔ” ÌÔ”" ÌÔ”# ÌÔ”) ÌÔ!–” ÌÓ” ÌÓ” ÌÕ”" ÌÕ”# ÌÕ”. ÌÕ&˜” ÌÓ” ÌÓ” ÌÖ” ÌÖ” ÌÖ”" ÌÖ”# ÌÖ”( ÌÖ –” ÌÓ” ÌÓ” Ì×” Ì×” Ì×” Ì×–” ÌÓ” ÌÓ” ÌØ” ÌØ” ÌØ” ÌØ–” ÌÓ” ÌÓ” ÌÙ” ÌÙ” ÌÙ” ÌÙŸ” ÌÓ” ÌÓ” ÌÚ” ÌÚ” ÌÚ” ÌÚ”  ÌÚ”# ÌÚ”) ÌÚ!”* ÌÚ"”. ÌÚ&”0 ÌÚ(”1 ÌÚ)”2 ÌÚ*”3 ÌÚ+’” ÌÓ” ÌÓ’” ÌÒ” ÌÒ	’” Ìi” Ìi	‘” ÌáÔrG–§version¤file§sources®sourcesContent¥names¨mappingsÀ‘À‘ÀÜz‘”    ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”  	 ‘”  
+ ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”    ‘”  ! ‘”  " ‘”  # ‘”  $ ‘”  % ‘”  & ‘”  ' ‘”  ( ‘”  ) ‘”  * ‘”  + ‘”  , ‘”  - ‘”  . ‘”  / ‘”  0 ‘”  1 ‘”  2 ‘”  3 ‘”  4 ‘”  5 ‘”  6 ‘”  7 ‘”  8 ‘”  9 ‘”  : ‘”  ; ‘”  < ‘”  = ‘”  > ‘”  ? ‘”  Ì@ ‘”  ÌA ‘”  ÌB ‘”  ÌC ‘”  ÌD ‘”  ÌE ‘”  ÌF ‘”  ÌG ‘”  ÌH ‘”  ÌI ‘”  ÌJ ‘”  ÌK ‘”  ÌL ‘”  ÌM ‘”  ÌN ‘”  ÌO ‘”  ÌP ‘”  ÌQ ‘”  ÌR ‘”  ÌS ‘”  ÌT ‘”  ÌU ‘”  ÌV ‘”  ÌW ‘”  ÌX ‘”  ÌY ‘”  ÌZ ‘”  Ì[ ‘”  Ì\ ‘”  Ì] ‘”  Ì^ ‘”  Ì_ ‘”  Ì` ‘”  Ìa ‘”  Ìb ‘”  Ìc ‘”  Ìd ‘”  Ìe ‘”  Ìf ‘”  Ìg ‘”  Ìh ‘”  Ìi ‘”  Ìj ‘”  Ìk ‘”  Ìl ‘”  Ìm ‘”  Ìn ‘”  Ìo ‘”  Ìp ‘”  Ìq ‘”  Ìr ‘”  Ìs ‘”  Ìt ‘”  Ìu ‘”  Ìv ‘”  Ìw ‘”  Ìx ‘”  Ìy ‘”  Ìz ‘”  Ì{ ‘”  Ì| ‘”  Ì} ‘”  Ì~ ‘”  Ì ‘”  Ì€ ‘”  Ì ‘”  Ì‚ ‘”  Ìƒ ‘”  Ì„ ‘”  Ì… ‘”  Ì† ‘”  Ì‡ ‘”  Ìˆ ‘”  Ì‰ ‘”  ÌŠ ‘”  Ì‹ ‘”  ÌŒ ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì ‘”  Ì‘ ‘”  Ì’ ‘”  Ì“ ‘”  Ì” ‘”  Ì• ‘”  Ì– ‘”  Ì— ‘”  Ì˜ ‘”  Ì™ ‘”  Ìš ‘”  Ì› ‘”  Ìœ ‘”  Ì ‘”  Ì ‘”  ÌŸ ‘”  Ì  ‘”  Ì¡ ‘”  Ì¢ ‘”  Ì£ ‘”  Ì¤ ‘”  Ì¥ ‘”  Ì¦ ‘”  Ì§ ‘”  Ì¨ ‘”  Ì© ‘”  Ìª ‘”  Ì« ‘”  Ì¬ ‘”  Ì­ ‘”  Ì® ‘”  Ì¯ ‘”  Ì° ‘”  Ì± ‘”  Ì² ‘”  Ì³ ‘”  Ì´ ‘”  Ìµ ‘”  Ì¶ ‘”  Ì· ‘”  Ì¸ ‘”  Ì¹ ‘”  Ìº ‘”  Ì» ‘”  Ì¼ ‘”  Ì½ ‘”  Ì¾ ‘”  Ì¿ ‘”  ÌÀ ‘”  ÌÁ ‘”  ÌÂ ‘”  ÌÃ ‘”  ÌÄ ‘”  ÌÅ ‘”  ÌÆ ‘”  ÌÇ ‘”  ÌÈ ‘”  ÌÉ ‘”  ÌÊ ‘”  ÌË ‘”  ÌÌ ‘”  ÌÍ ‘”  ÌÎ ‘”  ÌÏ ‘”  ÌĞ ‘”  ÌÑ ‘”  ÌÒ ‘”  ÌÓ ‘”  ÌÔ ‘”  ÌÕ ‘”  ÌÖ ‘”  Ì× ‘”  ÌØ ‘”  ÌÙ ‘”  ÌÚ ‘”  ÌÛ ‘”  ÌÜ ‘”  Ìİ ‘”  ÌŞ ‘”  Ìß ‘”  Ìà ‘”  Ìá ‘”  Ìâ ‘”  Ìã ‘”  Ìä ‘”  Ìå ‘”  Ìæ ‘”  Ìç ‘”  Ìè ‘”  Ìé ‘”  Ìê ‘”  Ìë ‘”  Ìì ‘”  Ìí ‘”  Ìî ‘”  Ìï ‘”  Ìğ ‘”  Ìñ ‘”  Ìò ‘”  Ìó ‘”  Ìô ‘”  Ìõ ‘”  Ìö ‘”  Ì÷ ‘”  Ìø ‘”  Ìù ‘”  Ìú ‘”  Ìû ‘”  Ìü ‘”  Ìı ‘”  Ìş ‘”  Ìÿ ‘”  Í  ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í	 ‘”  Í
+ ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í  ‘”  Í! ‘”  Í" ‘”  Í# ‘”  Í$ ‘”  Í% ‘”  Í& ‘”  Í' ‘”  Í( ‘”  Í) ‘”  Í* ‘”  Í+ ‘”  Í, ‘”  Í- ‘”  Í. ‘”  Í/ ‘”  Í0 ‘”  Í1 ‘”  Í2 ‘”  Í3 ‘”  Í4 ‘”  Í5 ‘”  Í6 ‘”  Í7 ‘”  Í8 ‘”  Í9 ‘”  Í: ‘”  Í; ‘”  Í< ‘”  Í= ‘”  Í> ‘”  Í? ‘”  Í@ ‘”  ÍA ‘”  ÍB ‘”  ÍC ‘”  ÍD ‘”  ÍE ‘”  ÍF ‘”  ÍG ‘”  ÍH ‘”  ÍI ‘”  ÍJ ‘”  ÍK ‘”  ÍL ‘”  ÍM ‘”  ÍN ‘”  ÍO ‘”  ÍP ‘”  ÍQ ‘”  ÍR ‘”  ÍS ‘”  ÍT ‘”  ÍU ‘”  ÍV ‘”  ÍW ‘”  ÍX ‘”  ÍY ‘”  ÍZ ‘”  Í[ ‘”  Í\ ‘”  Í] ‘”  Í^ ‘”  Í_ ‘”  Í` ‘”  Ía ‘”  Íb ‘”  Íc ‘”  Íd ‘”  Íe ‘”  Íf ‘”  Íg ‘”  Íh ‘”  Íi ‘”  Íj ‘”  Ík ‘”  Íl ‘”  Ím ‘”  Ín ‘”  Ío ‘”  Íp ‘”  Íq ‘”  Ír ‘”  Ís ‘”  Ít ‘”  Íu ‘”  Ív ‘”  Íw ‘”  Íx ‘”  Íy ÔrH’§missing¦pluginÃ¦genAbcÂÔ  ÔrI”²dynamicImportCache¹exportAllDeclarationCache»exportNamedDeclarationCache«importCache–ÔrJ•¤type¥start£endªspecifiers¦source±ImportDeclarationÌ€Ì¢‘ÔrK”¤type¥start£end¥local¶ImportDefaultSpecifierÌ‡ÌÔrL”¤type¥start£end¤nameªIdentifierÌ‡Ì¦routerÔrM•¤type¥start£end¥value£raw§LiteralÌ“Ì¡¬@ohos.router®'@ohos.router'J±ImportDeclarationÌ¤Ì×‘K¶ImportDefaultSpecifierÌ«Ì¶LªIdentifierÌ«Ì¶«ProductItemM§LiteralÌ¼ÌÖ¸../viewmodel/ProductItemº'../viewmodel/ProductItem'J±ImportDeclarationÌÙÍ‘K¶ImportDefaultSpecifierÌàÌìLªIdentifierÌàÌì¬promptActionM§LiteralÌòÍ²@ohos.promptAction´'@ohos.promptAction'J±ImportDeclarationÍ	Í2‘ÔrN•¤type¥start£end¨imported¥local¯ImportSpecifierÍÍLªIdentifierÍÍ¤UserLªIdentifierÍÍ¤UserM§LiteralÍÍ1±../viewmodel/User³'../viewmodel/User'J±ImportDeclarationÍ4Íb‘K¶ImportDefaultSpecifierÍ;ÍBLªIdentifierÍ;ÍB§RdbUtilM§LiteralÍHÍa·../common/utils/RdbUtil¹'../common/utils/RdbUtil'J±ImportDeclarationÍdÍš‘N¯ImportSpecifierÍmÍzLªIdentifierÍmÍz­MOCK_PRODUCTSLªIdentifierÍmÍz­MOCK_PRODUCTSM§LiteralÍ‚Í™µ../viewmodel/MockData·'../viewmodel/MockData'
